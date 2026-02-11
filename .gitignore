@@ -32,6 +32,7 @@ backend/redisdata/
 # Test output
 coverage/
 .nyc_output/
+**/.phpunit.cache/
 
 # WordPress
 plugin/*.zip

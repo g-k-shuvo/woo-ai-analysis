@@ -383,6 +383,18 @@ final class SettingsTest extends TestCase {
 		$this->assertSame( 'Store already exists', $result->data['message'] );
 	}
 
+	public function test_connect_sanitizes_backend_error_message(): void {
+		WP_Stubs::$overrides['wp_remote_post'] = fn() => $this->make_response(
+			409,
+			array( 'success' => false, 'error' => array( 'message' => '<script>alert("xss")</script>Store exists' ) )
+		);
+
+		$result = $this->call_handler( 'handle_connect' );
+
+		$this->assertFalse( $result->success );
+		$this->assertStringNotContainsString( '<script>', $result->data['message'] );
+	}
+
 	// ═══════════════════════════════════════════════════════════════════════════════
 	// handle_disconnect
 	// ═══════════════════════════════════════════════════════════════════════════════
@@ -568,8 +580,7 @@ final class SettingsTest extends TestCase {
 		$token   = Settings::get_auth_token();
 		$decoded = base64_decode( $token );
 
-		$this->assertStringContains( 'https://example.com:', $decoded );
-		$this->assertStringContains( 'test-key-123', $decoded );
+		$this->assertSame( 'https://example.com:test-key-123', $decoded );
 	}
 
 	public function test_get_auth_token_returns_empty_when_no_key(): void {
@@ -586,11 +597,5 @@ final class SettingsTest extends TestCase {
 		$token = Settings::get_auth_token();
 
 		$this->assertSame( '', $token );
-	}
-
-	// ─── Helper for assertStringContains (PHPUnit 10 compat) ─────────────────────
-
-	private static function assertStringContains( string $needle, string $haystack ): void {
-		self::assertStringContainsString( $needle, $haystack );
 	}
 }

@@ -191,5 +191,7 @@ final class Ajax_Handler {
 	/**
 	 * Prevent unserialization.
 	 */
-	private function __wakeup() {}
+	public function __wakeup(): void {
+		throw new \RuntimeException( 'Cannot unserialize singleton.' );
+	}
 }

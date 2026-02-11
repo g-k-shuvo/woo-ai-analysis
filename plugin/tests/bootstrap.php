@@ -37,7 +37,7 @@ class WP_Stubs {
 	/** @var array<string, callable> */
 	public static array $overrides = array();
 
-	/** @var array<string, array<string, mixed>> */
+	/** @var array<string, list<list<mixed>>> */
 	public static array $calls = array();
 
 	/**

@@ -1,7 +1,7 @@
 # Feature: AJAX Handler — Plugin Proxies Chat Requests with Nonce
 
 **Slug:** ajax-handler
-**Status:** In Progress
+**Status:** In Review
 **Owner:** Developer
 **Created:** 2026-02-12
 **Last updated:** 2026-02-12
@@ -120,9 +120,9 @@ Response (error): { success: false, data: { message: "..." } }
 ## 11. Checklist
 - [x] Plan reviewed
 - [x] Feature spec approved
-- [ ] Tests added/updated
-- [ ] Lint/test/build pass
-- [ ] Docs updated
-- [ ] PR raised
+- [x] Tests added/updated
+- [x] Lint/test/build pass
+- [x] Docs updated
+- [x] PR raised
 - [ ] PR reviewed and approved
 - [ ] Merged

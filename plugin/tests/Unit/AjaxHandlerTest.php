@@ -455,8 +455,7 @@ final class AjaxHandlerTest extends TestCase {
 
 		$token = str_replace( 'Bearer ', '', $captured_auth );
 		$decoded = base64_decode( $token );
-		$this->assertStringStartsWith( 'https://example.com:', $decoded );
-		$this->assertStringEndsWith( 'test-api-key-12345', $decoded );
+		$this->assertSame( 'https://example.com:test-api-key-12345', $decoded );
 	}
 
 	// ─── handle_chat_suggestions — Nonce ─────────────────────────────────────────
@@ -671,9 +670,8 @@ final class AjaxHandlerTest extends TestCase {
 		$result = $this->call_handler( 'handle_chat_suggestions' );
 
 		$this->assertTrue( $result->success );
-		foreach ( $result->data['suggestions'] as $suggestion ) {
-			$this->assertStringNotContainsString( '<', $suggestion );
-			$this->assertStringNotContainsString( '>', $suggestion );
-		}
+		// strip_tags removes tags but keeps inner text content.
+		$this->assertSame( 'alert("xss")Revenue question', $result->data['suggestions'][0] );
+		$this->assertSame( 'Products', $result->data['suggestions'][1] );
 	}
 }
