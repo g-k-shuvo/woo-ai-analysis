@@ -47,8 +47,7 @@ woo-ai-analytics/
 │   │   ├── config.ts                  # Environment config loader
 │   │   ├── routes/
 │   │   │   ├── health.ts             # GET /health
-│   │   │   ├── auth/
-│   │   │   │   └── connect.ts        # POST /api/stores/connect
+│   │   │   ├── stores.ts             # POST /api/stores/connect, GET /status, DELETE /disconnect
 │   │   │   ├── sync/
 │   │   │   │   ├── orders.ts         # POST /api/sync/orders
 │   │   │   │   ├── products.ts       # POST /api/sync/products
@@ -58,12 +57,14 @@ woo-ai-analytics/
 │   │   │   └── dashboards/
 │   │   │       └── index.ts          # CRUD for saved charts
 │   │   ├── middleware/
-│   │   │   ├── auth.ts               # API key validation
-│   │   │   └── rateLimit.ts          # Per-store rate limiting
+│   │   │   ├── auth.ts               # API key validation (Bearer token, bcrypt compare)
+│   │   │   ├── errorHandler.ts       # Global error handler + 404
+│   │   │   └── rateLimit.ts          # Per-store rate limiting (planned)
 │   │   ├── services/
-│   │   │   ├── syncService.ts        # Data upsert logic
-│   │   │   ├── chatService.ts        # Orchestrates AI pipeline
-│   │   │   └── chartService.ts       # Chart rendering
+│   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
+│   │   │   ├── syncService.ts        # Data upsert logic (planned)
+│   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
+│   │   │   └── chartService.ts       # Chart rendering (planned)
 │   │   └── utils/
 │   │       ├── errors.ts             # Custom error classes
 │   │       └── logger.ts             # Structured logging

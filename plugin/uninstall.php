@@ -14,6 +14,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 // Remove all plugin options
 delete_option( 'waa_api_url' );
 delete_option( 'waa_store_api_key' );
+delete_option( 'waa_store_id' );
 delete_option( 'waa_connected' );
 delete_option( 'waa_version' );
 

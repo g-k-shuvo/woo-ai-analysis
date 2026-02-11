@@ -12,8 +12,8 @@
 - [x] **1.7** @wordpress/scripts build pipeline — Webpack + React admin UI
 
 ### Sprint 2: Connection & Sync (Week 3–4)
-- [ ] **2.1** Store connection flow — Plugin generates API key → handshakes with SaaS
-- [ ] **2.2** Auth middleware — API key validation on all backend routes
+- [x] **2.1** Store connection flow — Plugin generates API key → handshakes with SaaS
+- [x] **2.2** Auth middleware — API key validation on all backend routes
 - [ ] **2.3** Initial full sync — Orders batch read + send to backend
 - [ ] **2.4** Initial full sync — Products + Customers + Categories
 - [ ] **2.5** Incremental sync — WooCommerce webhook registration + handlers
