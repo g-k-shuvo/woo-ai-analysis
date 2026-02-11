@@ -24,6 +24,12 @@ export interface SqlValidationResult {
   errors: string[];
 }
 
+export interface QueryExecutionResult {
+  rows: Record<string, unknown>[];
+  rowCount: number;
+  durationMs: number;
+}
+
 export interface OpenAIResponse {
   sql: string;
   explanation: string;
