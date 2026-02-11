@@ -186,6 +186,34 @@ const examples: readonly FewShotExample[] = [
     explanation:
       'Counts orders by payment method, excluding nulls.',
   },
+  {
+    category: 'order',
+    question: 'How many orders did I get this month?',
+    sql: `SELECT COUNT(*) AS order_count, COALESCE(ROUND(SUM(total), 2), 0) AS total_revenue FROM orders WHERE store_id = $1 AND status IN ('completed', 'processing') AND date_created >= DATE_TRUNC('month', NOW()) LIMIT 1`,
+    explanation:
+      'Counts completed/processing orders from the start of the current month.',
+  },
+  {
+    category: 'order',
+    question: 'Show me my recent orders',
+    sql: `SELECT wc_order_id, date_created, status, ROUND(total, 2) AS total FROM orders WHERE store_id = $1 ORDER BY date_created DESC LIMIT 10`,
+    explanation:
+      'Lists the 10 most recent orders sorted by creation date descending.',
+  },
+  {
+    category: 'order',
+    question: 'How many orders are pending?',
+    sql: `SELECT COUNT(*) AS pending_count FROM orders WHERE store_id = $1 AND status = 'pending' LIMIT 1`,
+    explanation:
+      'Counts orders with pending status for this store.',
+  },
+  {
+    category: 'order',
+    question: 'What percentage of orders were refunded?',
+    sql: `SELECT ROUND(COUNT(*) FILTER (WHERE status = 'refunded') * 100.0 / NULLIF(COUNT(*), 0), 2) AS refund_rate, COUNT(*) FILTER (WHERE status = 'refunded') AS refunded_count, COUNT(*) AS total_orders FROM orders WHERE store_id = $1 LIMIT 1`,
+    explanation:
+      'Calculates refund rate as percentage of total orders for this store.',
+  },
 ];
 
 export function getFewShotExamples(): readonly FewShotExample[] {

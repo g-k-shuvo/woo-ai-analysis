@@ -29,7 +29,7 @@
 - [x] **3.6** Revenue queries — Total, by period, comparisons
 - [x] **3.7** Product queries — Top sellers, category performance
 - [x] **3.8** Customer queries — New vs returning, top spenders
-- [ ] **3.9** Order queries — Count, AOV, status breakdown
+- [x] **3.9** Order queries — Count, AOV, status breakdown
 - [ ] **3.10** Chart spec generation — AI outputs chart type + config
 
 ### Sprint 4: Chat UI & Charts (Week 9–10)

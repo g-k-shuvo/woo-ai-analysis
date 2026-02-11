@@ -75,7 +75,7 @@ woo-ai-analytics/
 │   │   └── ai/
 │   │       ├── prompts/
 │   │       │   ├── system.ts         # System prompt builder (schema + metadata + rules + few-shot) [implemented]
-│   │       │   └── examples.ts       # 20 few-shot NL→SQL examples across 4 categories [implemented]
+│   │       │   └── examples.ts       # 28 few-shot NL→SQL examples across 4 categories [implemented]
 │   │       ├── schemaContext.ts       # Store metadata fetcher (counts, dates, currency) [implemented]
 │   │       ├── types.ts              # Shared AI pipeline types (ChartSpec, AIQueryResult, etc.) [implemented]
 │   │       ├── pipeline.ts           # Main NL→SQL→Result pipeline (OpenAI integration) [implemented]
@@ -83,6 +83,8 @@ woo-ai-analytics/
 │   │       ├── queryExecutor.ts     # Execute validated SQL via read-only DB, return rows + metadata [implemented]
 │   │       ├── revenueQueries.ts    # Revenue query service (total, by period, comparisons, breakdown) [implemented]
 │   │       ├── productQueries.ts    # Product query service (top sellers, category performance, stock) [implemented]
+│   │       ├── customerQueries.ts  # Customer query service (new vs returning, top spenders, CLV) [implemented]
+│   │       ├── orderQueries.ts     # Order query service (count, AOV, status breakdown, recent) [implemented]
 │   │       └── chartSpec.ts          # AI → Chart.js config converter (planned)
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
@@ -104,7 +106,9 @@ woo-ai-analytics/
 │   │   │   │   ├── pipeline.test.ts        # NL→SQL pipeline tests [implemented]
 │   │   │   │   ├── queryExecutor.test.ts  # Query executor unit tests [implemented]
 │   │   │   │   ├── revenueQueries.test.ts # Revenue query service unit tests [implemented]
-│   │   │   │   └── productQueries.test.ts # Product query service unit tests [implemented]
+│   │   │   │   ├── productQueries.test.ts # Product query service unit tests [implemented]
+│   │   │   │   ├── customerQueries.test.ts # Customer query service unit tests [implemented]
+│   │   │   │   └── orderQueries.test.ts  # Order query service unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   └── ...                        # Other unit tests
@@ -114,6 +118,8 @@ woo-ai-analytics/
 │   │   │   ├── queryExecution.test.ts     # Query executor integration tests [implemented]
 │   │   │   ├── revenueQueries.test.ts    # Revenue query integration tests [implemented]
 │   │   │   ├── productQueries.test.ts    # Product query integration tests [implemented]
+│   │   │   ├── customerQueries.test.ts  # Customer query integration tests [implemented]
+│   │   │   ├── orderQueries.test.ts     # Order query integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev
