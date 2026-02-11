@@ -5,7 +5,6 @@
       "Bash(git remote add:*)",
       "Bash(dir:*)",
       "Bash(bash scripts/dev-loop.sh:*)",
-      "Bash(ren \"D:\\\\Personal_Projects\\\\woo-ai-analytics\\\\backend\\\\.eslintrc.js\" \".eslintrc.cjs\")",
       "Bash(npm test:*)",
       "Bash(docker-compose config:*)",
       "Bash(gh auth status:*)"

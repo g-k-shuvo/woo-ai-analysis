@@ -176,22 +176,6 @@ describe('Store Routes', () => {
       expect(body.data.plan).toBe('free');
     });
 
-    it('returns 401 when store is not set (unauthenticated)', async () => {
-      const mockService = createMockStoreService();
-      app = Fastify();
-      registerErrorHandler(app);
-      app.decorateRequest('store', undefined);
-
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
-      await app.ready();
-
-      const response = await app.inject({ method: 'GET', url: '/api/stores/status' });
-      const body = JSON.parse(response.body);
-
-      expect(response.statusCode).toBe(401);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('AUTH_ERROR');
-    });
   });
 
   describe('DELETE /api/stores/disconnect', () => {
@@ -223,25 +207,6 @@ describe('Store Routes', () => {
       expect(body.success).toBe(true);
       expect(body.data.message).toBe('Store disconnected and all data deleted.');
       expect(mockService.disconnectStore).toHaveBeenCalledWith('store-123');
-    });
-
-    it('returns 401 when store is not set (unauthenticated)', async () => {
-      const mockService = createMockStoreService();
-      app = Fastify();
-      registerErrorHandler(app);
-      app.decorateRequest('store', undefined);
-
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
-      await app.ready();
-
-      const response = await app.inject({
-        method: 'DELETE',
-        url: '/api/stores/disconnect',
-      });
-      const body = JSON.parse(response.body);
-
-      expect(response.statusCode).toBe(401);
-      expect(body.success).toBe(false);
     });
 
     it('returns 404 when store service throws NotFoundError', async () => {

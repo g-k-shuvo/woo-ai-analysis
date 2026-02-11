@@ -179,13 +179,16 @@ final class Settings {
 		$status_code = wp_remote_retrieve_response_code( $response );
 		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( 201 !== $status_code || empty( $body['success'] ) ) {
-			$error_msg = $body['error']['message'] ?? __( 'Connection failed.', 'woo-ai-analytics' );
+		if ( 201 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Connection failed.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = $body['error']['message'];
+			}
 			wp_send_json_error( array( 'message' => $error_msg ) );
 		}
 
-		// Store the raw API key and mark as connected.
-		update_option( 'waa_store_api_key', $api_key );
+		// Encrypt and store the API key.
+		update_option( 'waa_store_api_key', self::encrypt_api_key( $api_key ) );
 		update_option( 'waa_store_id', sanitize_text_field( $body['data']['storeId'] ?? '' ) );
 		update_option( 'waa_connected', true );
 
@@ -205,15 +208,70 @@ final class Settings {
 	 * @return string The Bearer token value, or empty string if not connected.
 	 */
 	public static function get_auth_token(): string {
-		$api_key   = get_option( 'waa_store_api_key', '' );
+		$encrypted = get_option( 'waa_store_api_key', '' );
 		$store_url = site_url();
 
+		if ( empty( $encrypted ) ) {
+			return '';
+		}
+
+		$api_key = self::decrypt_api_key( $encrypted );
 		if ( empty( $api_key ) ) {
 			return '';
 		}
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
 		return base64_encode( $store_url . ':' . $api_key );
+	}
+
+	/**
+	 * Encrypt an API key for safe storage in wp_options.
+	 *
+	 * @param string $plain_key The plaintext API key.
+	 * @return string The encrypted value (base64-encoded).
+	 */
+	private static function encrypt_api_key( string $plain_key ): string {
+		$key    = self::get_encryption_key();
+		$iv     = openssl_random_pseudo_bytes( 16 );
+		$cipher = openssl_encrypt( $plain_key, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		if ( false === $cipher ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		return base64_encode( $iv . $cipher );
+	}
+
+	/**
+	 * Decrypt an API key retrieved from wp_options.
+	 *
+	 * @param string $encrypted The encrypted value (base64-encoded).
+	 * @return string The plaintext API key, or empty string on failure.
+	 */
+	private static function decrypt_api_key( string $encrypted ): string {
+		$key = self::get_encryption_key();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		$raw = base64_decode( $encrypted, true );
+
+		if ( false === $raw || strlen( $raw ) < 17 ) {
+			return '';
+		}
+
+		$iv     = substr( $raw, 0, 16 );
+		$cipher = substr( $raw, 16 );
+		$plain  = openssl_decrypt( $cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		return ( false === $plain ) ? '' : $plain;
+	}
+
+	/**
+	 * Derive a 32-byte encryption key from WordPress auth salt.
+	 *
+	 * @return string A 32-byte binary key.
+	 */
+	private static function get_encryption_key(): string {
+		return hash( 'sha256', wp_salt( 'auth' ), true );
 	}
 
 	/**

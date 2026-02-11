@@ -79,7 +79,7 @@ export function createStoreService(deps: StoreServiceDeps) {
       })
       .returning('id');
 
-    const storeId = inserted.id ?? inserted;
+    const storeId = inserted.id;
 
     logger.info({ storeId, storeUrl: normalizedUrl }, 'New store connected');
     return { storeId };

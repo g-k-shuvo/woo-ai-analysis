@@ -71,8 +71,8 @@
 // Response 400
 { "success": false, "error": { "code": "VALIDATION_ERROR", "message": "..." } }
 
-// Response 409
-{ "success": false, "error": { "code": "STORE_ALREADY_CONNECTED", "message": "..." } }
+// Note: Duplicate store_url is treated as a re-connect (updates API key, reactivates store).
+// No 409 is returned — the endpoint is idempotent for existing stores.
 ```
 
 ### GET /api/stores/status (Auth required)

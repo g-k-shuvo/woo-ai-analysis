@@ -30,14 +30,17 @@ export function registerAuthMiddleware(fastify: FastifyInstance, deps: AuthDeps)
   fastify.addHook(
     'onRequest',
     async (request: FastifyRequest, _reply: FastifyReply) => {
+      // Use routeOptions.url (Fastify v5) to get the path without query string
+      const routePath = request.routeOptions?.url ?? request.url.split('?')[0];
+
       // Skip auth for health check and connect endpoint
       const skipPaths = ['/health', '/api/stores/connect'];
-      if (skipPaths.includes(request.url)) {
+      if (skipPaths.includes(routePath)) {
         return;
       }
 
       // Only protect /api/* routes
-      if (!request.url.startsWith('/api/')) {
+      if (!routePath.startsWith('/api/')) {
         return;
       }
 
