@@ -18,6 +18,12 @@ import { syncStatusRoutes } from './routes/sync/status.js';
 import { syncErrorsRoutes } from './routes/sync/errors.js';
 import { createSyncRetryService } from './services/syncRetryService.js';
 import { createReadonlyDb } from './db/readonlyConnection.js';
+import { chatQueryRoutes } from './routes/chat/query.js';
+import { createChatService } from './services/chatService.js';
+import { createAIQueryPipeline } from './ai/pipeline.js';
+import { createSchemaContextService } from './ai/schemaContext.js';
+import { createQueryExecutor } from './ai/queryExecutor.js';
+import OpenAI from 'openai';
 
 const startTime = Date.now();
 
@@ -69,6 +75,13 @@ const storeService = createStoreService({ db });
 const syncService = createSyncService({ db });
 const syncRetryService = createSyncRetryService({ db });
 
+// AI services
+const openai = new OpenAI({ apiKey: config.openai.apiKey });
+const schemaContextService = createSchemaContextService({ db });
+const aiPipeline = createAIQueryPipeline({ openai, schemaContextService });
+const queryExecutor = createQueryExecutor({ readonlyDb });
+const chatService = createChatService({ aiPipeline, queryExecutor });
+
 // Routes
 await fastify.register(
   async (instance) => healthRoutes(instance, { db, redis, startTime }),
@@ -104,6 +117,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => syncErrorsRoutes(instance, { syncRetryService }),
+);
+
+await fastify.register(
+  async (instance) => chatQueryRoutes(instance, { chatService }),
 );
 
 // Graceful shutdown

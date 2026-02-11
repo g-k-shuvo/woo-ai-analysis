@@ -33,7 +33,7 @@
 - [x] **3.10** Chart spec generation — AI outputs chart type + config
 
 ### Sprint 4: Chat UI & Charts (Week 9–10)
-- [ ] **4.1** Chat UI component — React message thread in WP admin
+- [x] **4.1** Chat UI component — React message thread in WP admin
 - [ ] **4.2** Chat input — Message box + send + suggested questions
 - [ ] **4.3** AJAX handler — Plugin proxies chat requests (with nonce)
 - [ ] **4.4** Chart.js integration — Client-side interactive charts
