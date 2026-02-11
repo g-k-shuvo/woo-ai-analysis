@@ -8,6 +8,8 @@ import { storeRoutes } from './routes/stores.js';
 import { registerErrorHandler } from './middleware/errorHandler.js';
 import { registerAuthMiddleware } from './middleware/auth.js';
 import { createStoreService } from './services/storeService.js';
+import { createSyncService } from './services/syncService.js';
+import { syncOrdersRoutes } from './routes/sync/orders.js';
 
 const startTime = Date.now();
 
@@ -53,6 +55,7 @@ registerAuthMiddleware(fastify, { db });
 
 // Services
 const storeService = createStoreService({ db });
+const syncService = createSyncService({ db });
 
 // Routes
 await fastify.register(
@@ -61,6 +64,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => storeRoutes(instance, { storeService }),
+);
+
+await fastify.register(
+  async (instance) => syncOrdersRoutes(instance, { syncService }),
 );
 
 // Graceful shutdown
