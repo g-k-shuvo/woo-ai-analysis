@@ -153,6 +153,24 @@ describe('Sync Categories Routes', () => {
       expect(body.error.code).toBe('VALIDATION_ERROR');
     });
 
+    it('returns 400 when a category has empty name', async () => {
+      const mockService = createMockSyncService();
+      app = await buildApp(mockService);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/sync/categories',
+        payload: {
+          categories: [{ wc_category_id: 10, name: '' }],
+        },
+      });
+      const body = JSON.parse(response.body);
+
+      expect(response.statusCode).toBe(400);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
     it('returns 200 with partial success when service reports skipped categories', async () => {
       const mockService = createMockSyncService();
       mockService.upsertCategories.mockResolvedValueOnce({

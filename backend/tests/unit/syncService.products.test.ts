@@ -220,6 +220,26 @@ describe('SyncService — upsertProducts', () => {
     expect(result.skippedCount).toBe(1);
   });
 
+  it('skips invalid products with empty string name', async () => {
+    const service = createSyncService({ db });
+    const result = await service.upsertProducts('store-123', [
+      makeValidProduct({ name: '' }),
+    ]);
+
+    expect(result.syncedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+  });
+
+  it('skips invalid products with whitespace-only name', async () => {
+    const service = createSyncService({ db });
+    const result = await service.upsertProducts('store-123', [
+      makeValidProduct({ name: '   ' }),
+    ]);
+
+    expect(result.syncedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+  });
+
   it('skips invalid products with non-integer wc_product_id', async () => {
     const service = createSyncService({ db });
     const result = await service.upsertProducts('store-123', [

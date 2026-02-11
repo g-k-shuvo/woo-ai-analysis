@@ -220,6 +220,26 @@ describe('SyncService — upsertCategories', () => {
     expect(result.skippedCount).toBe(1);
   });
 
+  it('skips invalid categories with empty string name', async () => {
+    const service = createSyncService({ db });
+    const result = await service.upsertCategories('store-123', [
+      makeValidCategory({ name: '' }),
+    ]);
+
+    expect(result.syncedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+  });
+
+  it('skips invalid categories with whitespace-only name', async () => {
+    const service = createSyncService({ db });
+    const result = await service.upsertCategories('store-123', [
+      makeValidCategory({ name: '   ' }),
+    ]);
+
+    expect(result.syncedCount).toBe(0);
+    expect(result.skippedCount).toBe(1);
+  });
+
   it('skips invalid categories with non-integer wc_category_id', async () => {
     const service = createSyncService({ db });
     const result = await service.upsertCategories('store-123', [

@@ -90,7 +90,7 @@ function validateProduct(product: unknown): product is ProductPayload {
   if (!product || typeof product !== 'object') return false;
   const p = product as Record<string, unknown>;
   if (typeof p.wc_product_id !== 'number' || !Number.isInteger(p.wc_product_id)) return false;
-  if (typeof p.name !== 'string' || !p.name) return false;
+  if (typeof p.name !== 'string' || !p.name.trim()) return false;
   return true;
 }
 
@@ -105,7 +105,7 @@ function validateCategory(category: unknown): category is CategoryPayload {
   if (!category || typeof category !== 'object') return false;
   const c = category as Record<string, unknown>;
   if (typeof c.wc_category_id !== 'number' || !Number.isInteger(c.wc_category_id)) return false;
-  if (typeof c.name !== 'string' || !c.name) return false;
+  if (typeof c.name !== 'string' || !c.name.trim()) return false;
   return true;
 }
 
@@ -337,13 +337,15 @@ export function createSyncService(deps: SyncServiceDeps) {
 
     const trx = await db.transaction();
     try {
-      // Batch-fetch category UUIDs to resolve category_id references
+      // Batch-fetch category UUIDs to resolve category_id references.
+      // WooCommerce uses category_id=0 to mean "uncategorized", so we skip 0.
       const categoryWcIds = validProducts
         .map((p) => p.category_id)
         .filter((id): id is number => !!id && id > 0);
       const categoryMap = await fetchIdsToMap(trx, 'categories', storeId, 'wc_category_id', [...new Set(categoryWcIds)]);
 
       for (const product of validProducts) {
+        // category_id=0 means "uncategorized" in WooCommerce — treat as null
         const categoryUuid = product.category_id && product.category_id > 0
           ? categoryMap.get(product.category_id) ?? null
           : null;
@@ -553,13 +555,15 @@ export function createSyncService(deps: SyncServiceDeps) {
 
     const trx = await db.transaction();
     try {
-      // Batch-fetch parent category UUIDs to resolve parent_id references
+      // Batch-fetch parent category UUIDs to resolve parent_id references.
+      // WooCommerce uses parent_id=0 to mean "root category" (no parent), so we skip 0.
       const parentWcIds = validCategories
         .map((c) => c.parent_id)
         .filter((id): id is number => !!id && id > 0);
       const parentMap = await fetchIdsToMap(trx, 'categories', storeId, 'wc_category_id', [...new Set(parentWcIds)]);
 
       for (const category of validCategories) {
+        // parent_id=0 means "root category" in WooCommerce — treat as null
         const parentUuid = category.parent_id && category.parent_id > 0
           ? parentMap.get(category.parent_id) ?? null
           : null;

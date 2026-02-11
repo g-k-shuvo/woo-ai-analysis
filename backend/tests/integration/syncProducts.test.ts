@@ -160,6 +160,24 @@ describe('Sync Products Routes', () => {
       expect(body.error.code).toBe('VALIDATION_ERROR');
     });
 
+    it('returns 400 when a product has empty name', async () => {
+      const mockService = createMockSyncService();
+      app = await buildApp(mockService);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/sync/products',
+        payload: {
+          products: [{ wc_product_id: 501, name: '' }],
+        },
+      });
+      const body = JSON.parse(response.body);
+
+      expect(response.statusCode).toBe(400);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
     it('returns 200 with partial success when service reports skipped products', async () => {
       const mockService = createMockSyncService();
       mockService.upsertProducts.mockResolvedValueOnce({
