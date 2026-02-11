@@ -69,16 +69,17 @@ woo-ai-analytics/
 │   │   │   ├── syncRetryService.ts   # Retry logic, exponential backoff, stale sync detection
 │   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
 │   │   │   └── chartService.ts       # Chart rendering (planned)
-│   │   └── utils/
-│   │       ├── errors.ts             # Custom error classes
-│   │       └── logger.ts             # Structured logging
-│   ├── ai/
-│   │   ├── prompts/
-│   │   │   ├── system.ts             # System prompt template
-│   │   │   └── examples.ts           # Few-shot NL→SQL examples
-│   │   ├── pipeline.ts               # Main NL→SQL→Result pipeline
-│   │   ├── validator.ts              # SQL validation (SELECT-only, store_id)
-│   │   └── chartSpec.ts              # AI → Chart.js config converter
+│   │   ├── utils/
+│   │   │   ├── errors.ts             # Custom error classes
+│   │   │   └── logger.ts             # Structured logging
+│   │   └── ai/
+│   │       ├── prompts/
+│   │       │   ├── system.ts         # System prompt builder (schema + metadata + rules + few-shot) [implemented]
+│   │       │   └── examples.ts       # 13 few-shot NL→SQL examples across 4 categories [implemented]
+│   │       ├── schemaContext.ts       # Store metadata fetcher (counts, dates, currency) [implemented]
+│   │       ├── pipeline.ts           # Main NL→SQL→Result pipeline (planned)
+│   │       ├── validator.ts          # SQL validation (SELECT-only, store_id) (planned)
+│   │       └── chartSpec.ts          # AI → Chart.js config converter (planned)
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
 │   │   └── specs/                    # Default chart configurations
@@ -89,6 +90,11 @@ woo-ai-analytics/
 │   ├── tests/
 │   │   ├── ai-test-cases.json        # Question→SQL test pairs
 │   │   ├── unit/
+│   │   │   ├── ai/
+│   │   │   │   ├── systemPrompt.test.ts   # System prompt builder tests [implemented]
+│   │   │   │   ├── examples.test.ts       # Few-shot examples tests [implemented]
+│   │   │   │   └── schemaContext.test.ts   # Schema context service tests [implemented]
+│   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev
