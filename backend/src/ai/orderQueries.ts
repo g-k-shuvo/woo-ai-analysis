@@ -230,16 +230,16 @@ export function createOrderQueries(deps: OrderQueryDeps) {
     validateStoreId(storeId);
 
     return measureQuery({ storeId }, 'orderStatusBreakdown', 'Failed to fetch order status breakdown', async () => {
-      const rows = await readonlyDb('orders')
+      const rows = (await readonlyDb('orders')
         .where({ store_id: storeId })
         .select('status')
         .count('* as order_count')
         .groupBy('status')
-        .orderBy('order_count', 'desc') as unknown as Array<Record<string, unknown>>;
+        .orderBy('order_count', 'desc')) as { status: string | null; order_count: string }[];
 
       return rows.map((row) => ({
-        status: String(row.status ?? 'unknown'),
-        count: parseInt(String(row.order_count ?? '0'), 10) || 0,
+        status: row.status ?? 'unknown',
+        count: parseInt(row.order_count, 10) || 0,
       }));
     });
   }
@@ -252,7 +252,7 @@ export function createOrderQueries(deps: OrderQueryDeps) {
     validateLimit(limit);
 
     return measureQuery({ storeId, limit }, 'recentOrders', 'Failed to fetch recent orders', async () => {
-      const rows = await readonlyDb('orders')
+      const rows = (await readonlyDb('orders')
         .where({ store_id: storeId })
         .select(
           'wc_order_id',
@@ -261,14 +261,19 @@ export function createOrderQueries(deps: OrderQueryDeps) {
           readonlyDb.raw('ROUND(total, 2) AS total'),
         )
         .orderBy('date_created', 'desc')
-        .limit(limit) as unknown as Array<Record<string, unknown>>;
+        .limit(limit)) as {
+        wc_order_id: string | number | null;
+        date_created: Date | string | null;
+        status: string | null;
+        total: string | number | null;
+      }[];
 
       return rows.map((row) => ({
         wcOrderId: parseInt(String(row.wc_order_id ?? '0'), 10) || 0,
         dateCreated: row.date_created instanceof Date
           ? row.date_created.toISOString()
           : String(row.date_created ?? ''),
-        status: String(row.status ?? 'unknown'),
+        status: row.status ?? 'unknown',
         total: parseFloat(String(row.total ?? '0')) || 0,
       }));
     });

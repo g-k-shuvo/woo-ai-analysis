@@ -1,7 +1,7 @@
 # Feature: Order Queries — Count, AOV, Status Breakdown
 
 **Slug:** order-queries
-**Status:** In Progress
+**Status:** Complete
 **Owner:** Backend
 **Created:** 2026-02-11
 **Last updated:** 2026-02-11
@@ -21,7 +21,7 @@
 - Order status breakdown (count per status)
 - Orders by period (today, this week, this month, this year, last 7/30 days)
 - Orders by custom date range
-- Recent orders list (limited, no PII — display_name only)
+- Recent orders list (limited, no PII — order-level data only)
 - Additional few-shot examples for order queries
 - Unit tests (mocked Knex) and integration tests
 
@@ -151,9 +151,9 @@ function createOrderQueries(deps: OrderQueryDeps) {
 ## 11. Checklist
 - [x] Plan reviewed
 - [x] Feature spec approved
-- [ ] Tests added/updated
-- [ ] Lint/test/build pass
-- [ ] Docs updated (docs/ai/, agent_docs/)
-- [ ] PR raised
+- [x] Tests added/updated
+- [x] Lint/test/build pass
+- [x] Docs updated (docs/ai/, agent_docs/)
+- [x] PR raised
 - [ ] PR reviewed and approved
 - [ ] Merged
