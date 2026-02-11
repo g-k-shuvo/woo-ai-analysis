@@ -340,9 +340,10 @@ describe('createCustomerQueries', () => {
       expect(result).toEqual([]);
     });
 
-    it('rounds monetary values to 2 decimal places', async () => {
+    it('parses monetary values from DB (DB handles rounding via ROUND)', async () => {
+      // DB returns pre-rounded values via ROUND(total_spent, 2)
       const builder = createMockQueryBuilder([
-        { display_name: 'Alice', total_spent: '123.567', order_count: '3' },
+        { display_name: 'Alice', total_spent: '123.57', order_count: '3' },
       ]);
       const mockDb = createMockDb(builder);
       const queries = createCustomerQueries({ readonlyDb: mockDb as never });
@@ -645,6 +646,16 @@ describe('createCustomerQueries', () => {
       );
     });
 
+    it('throws ValidationError for invalid period', async () => {
+      const builder = createMockQueryBuilder({});
+      const mockDb = createMockDb(builder);
+      const queries = createCustomerQueries({ readonlyDb: mockDb as never });
+
+      await expect(
+        queries.newCustomersByPeriod(VALID_STORE_ID, 'invalid_period' as never),
+      ).rejects.toThrow('Invalid period: must be one of');
+    });
+
     it('wraps DB errors as AppError', async () => {
       const builder = createMockQueryBuilder({});
       builder.first.mockRejectedValue(new Error('connection error'));
@@ -694,7 +705,7 @@ describe('createCustomerQueries', () => {
       expect(result).toEqual({ count: 15 });
     });
 
-    it('filters by store_id and date range', async () => {
+    it('filters by store_id and date range (inclusive end)', async () => {
       const builder = createMockQueryBuilder({ customer_count: '0' });
       const mockDb = createMockDb(builder);
       const queries = createCustomerQueries({ readonlyDb: mockDb as never });
@@ -703,7 +714,8 @@ describe('createCustomerQueries', () => {
 
       expect(builder.where).toHaveBeenCalledWith({ store_id: VALID_STORE_ID });
       expect(builder.where).toHaveBeenCalledWith('first_order_date', '>=', '2026-01-01');
-      expect(builder.where).toHaveBeenCalledWith('first_order_date', '<', '2026-02-01');
+      // Date-only endDate is made inclusive by converting to end-of-day
+      expect(builder.where).toHaveBeenCalledWith('first_order_date', '<=', '2026-02-01T23:59:59.999Z');
     });
 
     it('returns 0 when no new customers in range', async () => {
@@ -896,10 +908,11 @@ describe('createCustomerQueries', () => {
       });
     });
 
-    it('rounds monetary values to 2 decimal places', async () => {
+    it('parses monetary values from DB (DB handles rounding via ROUND)', async () => {
+      // DB returns pre-rounded values via ROUND(AVG(...), 2)
       const builder = createMockQueryBuilder({
-        avg_total_spent: '123.567',
-        avg_order_count: '2.333',
+        avg_total_spent: '123.57',
+        avg_order_count: '2.33',
         total_customers: '50',
       });
       const mockDb = createMockDb(builder);

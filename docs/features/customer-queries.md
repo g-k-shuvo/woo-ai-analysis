@@ -44,7 +44,7 @@
 - FR2: Top spenders: SELECT display_name, total_spent, order_count from customers, ORDER BY total_spent DESC, with store_id filter
 - FR3: Top by order count: SELECT display_name, order_count, total_spent from customers, ORDER BY order_count DESC, with store_id filter
 - FR4: New customers by period: COUNT customers WHERE first_order_date within period, with store_id filter
-- FR5: New customers by custom date range: COUNT customers WHERE first_order_date BETWEEN start and end, with store_id filter
+- FR5: New customers by custom date range: COUNT customers WHERE first_order_date >= start AND first_order_date <= end (inclusive), with store_id filter
 - FR6: Customer lifetime value summary: AVG(total_spent), AVG(order_count), COUNT total customers, with store_id filter
 - FR7: All queries MUST include `WHERE store_id = $1` for tenant isolation
 - FR8: All queries use parameterized placeholders (no string concatenation)
@@ -154,7 +154,7 @@ function createCustomerQueries(deps: CustomerQueryDeps) {
 ## 11. Checklist
 - [x] Plan reviewed
 - [x] Feature spec approved
-- [ ] Tests added/updated
+- [x] Tests added/updated
 - [ ] Lint/test/build pass
 - [ ] Docs updated (docs/ai/, agent_docs/)
 - [ ] PR raised

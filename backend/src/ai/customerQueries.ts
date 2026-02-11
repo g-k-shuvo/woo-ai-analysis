@@ -20,6 +20,10 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
 const DEFAULT_TOP_CUSTOMERS_LIMIT = 10;
 const MAX_TOP_CUSTOMERS_LIMIT = 100;
 
+const VALID_PERIODS = new Set<string>([
+  'today', 'this_week', 'this_month', 'this_year', 'last_7_days', 'last_30_days',
+]);
+
 export type CustomerPeriod =
   | 'today'
   | 'this_week'
@@ -66,6 +70,14 @@ function validateLimit(limit: number): void {
   }
 }
 
+function validatePeriod(period: string): asserts period is CustomerPeriod {
+  if (!VALID_PERIODS.has(period)) {
+    throw new ValidationError(
+      `Invalid period: must be one of ${[...VALID_PERIODS].join(', ')}`,
+    );
+  }
+}
+
 async function measureQuery<T>(
   logContext: Record<string, unknown>,
   queryName: string,
@@ -84,6 +96,7 @@ async function measureQuery<T>(
     );
     return result;
   } catch (err) {
+    if (err instanceof AppError) throw err;
     const durationMs = Date.now() - startTime;
     logger.error(
       { ...logContext, durationMs, error: (err as Error).message },
@@ -109,6 +122,10 @@ function getCustomerPeriodStart(period: CustomerPeriod): string {
       return "NOW() - INTERVAL '7 days'";
     case 'last_30_days':
       return "NOW() - INTERVAL '30 days'";
+    default: {
+      const _exhaustive: never = period;
+      throw new ValidationError(`Unsupported period: ${String(_exhaustive)}`);
+    }
   }
 }
 
@@ -177,7 +194,7 @@ export function createCustomerQueries(deps: CustomerQueryDeps) {
 
       return rows.map((row) => ({
         displayName: String(row.display_name ?? 'Anonymous'),
-        totalSpent: Math.round((parseFloat(String(row.total_spent ?? '0')) || 0) * 100) / 100,
+        totalSpent: parseFloat(String(row.total_spent ?? '0')) || 0,
         orderCount: parseInt(String(row.order_count ?? '0'), 10) || 0,
       }));
     });
@@ -202,6 +219,7 @@ export function createCustomerQueries(deps: CustomerQueryDeps) {
     period: CustomerPeriod,
   ): Promise<NewCustomersResult> {
     validateStoreId(storeId);
+    validatePeriod(period);
 
     const periodStart = getCustomerPeriodStart(period);
 
@@ -237,6 +255,9 @@ export function createCustomerQueries(deps: CustomerQueryDeps) {
       throw new ValidationError('startDate must be before or equal to endDate');
     }
 
+    // Make endDate inclusive: for date-only strings, treat as end of day
+    const inclusiveEndDate = endDate.length === 10 ? `${endDate}T23:59:59.999Z` : endDate;
+
     return measureQuery(
       { storeId, startDate, endDate },
       'newCustomersByDateRange',
@@ -245,7 +266,7 @@ export function createCustomerQueries(deps: CustomerQueryDeps) {
         const row = await readonlyDb('customers')
           .where({ store_id: storeId })
           .where('first_order_date', '>=', startDate)
-          .where('first_order_date', '<', endDate)
+          .where('first_order_date', '<=', inclusiveEndDate)
           .select(
             readonlyDb.raw('COUNT(*) AS customer_count'),
           )
@@ -273,8 +294,8 @@ export function createCustomerQueries(deps: CustomerQueryDeps) {
         .first<Record<string, unknown>>();
 
       return {
-        avgTotalSpent: Math.round((parseFloat(String(row?.avg_total_spent ?? '0')) || 0) * 100) / 100,
-        avgOrderCount: Math.round((parseFloat(String(row?.avg_order_count ?? '0')) || 0) * 100) / 100,
+        avgTotalSpent: parseFloat(String(row?.avg_total_spent ?? '0')) || 0,
+        avgOrderCount: parseFloat(String(row?.avg_order_count ?? '0')) || 0,
         totalCustomers: parseInt(String(row?.total_customers ?? '0'), 10) || 0,
       };
     });

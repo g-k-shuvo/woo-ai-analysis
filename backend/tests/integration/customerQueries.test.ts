@@ -90,10 +90,10 @@ describe('Customer queries integration', () => {
         .whereIn('store_id', [TEST_STORE_ID, OTHER_STORE_ID])
         .delete();
 
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      const lastYear = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+      // Use fixed dates for deterministic tests
+      const today = new Date('2026-06-15T00:00:00Z');
+      const lastMonth = new Date('2026-05-15T00:00:00Z');
+      const lastYear = new Date('2025-06-15T00:00:00Z');
 
       // Insert test customers
       // Customer A: New customer (1 order), first order today
@@ -298,9 +298,9 @@ describe('Customer queries integration', () => {
       const queries = createCustomerQueries({ readonlyDb });
       const result = await queries.newCustomersByPeriod(TEST_STORE_ID, 'this_year');
 
-      // Alice New (today) + Bob Returning (last month) + Diana Recent (last month) = 3
-      // Charlie Loyal (last year) is excluded
-      expect(result.count).toBeGreaterThanOrEqual(3);
+      // Alice New (2026-06-15) + Bob Returning (2026-05-15) + Diana Recent (2026-05-15) = 3
+      // Charlie Loyal (2025-06-15) is excluded since it's last year
+      expect(result.count).toBe(3);
     });
 
     it('isolates data by store_id', async () => {
@@ -309,8 +309,8 @@ describe('Customer queries integration', () => {
       const queries = createCustomerQueries({ readonlyDb });
       const result = await queries.newCustomersByPeriod(OTHER_STORE_ID, 'this_year');
 
-      // Other store has 1 customer whose first order is today
-      expect(result.count).toBeGreaterThanOrEqual(1);
+      // Other store has 1 customer whose first order is 2026-06-15
+      expect(result.count).toBe(1);
     });
 
     it('returns 0 for non-existent store', async () => {
@@ -327,7 +327,7 @@ describe('Customer queries integration', () => {
   });
 
   describe('newCustomersByDateRange', () => {
-    it('counts new customers in a wide date range', async () => {
+    it('counts new customers in a wide date range (inclusive end)', async () => {
       if (!dbAvailable) return;
 
       const queries = createCustomerQueries({ readonlyDb });
@@ -337,7 +337,7 @@ describe('Customer queries integration', () => {
         '2030-01-01',
       );
 
-      // All 4 test store customers
+      // All 4 test store customers (end date is inclusive)
       expect(result.count).toBe(4);
     });
 
