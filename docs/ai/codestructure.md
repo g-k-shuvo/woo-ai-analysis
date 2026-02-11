@@ -84,9 +84,8 @@ woo-ai-analytics/
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
 │   │   └── specs/                    # Default chart configurations
-│   │   └── db/
-│   │       └── readonlyConnection.ts # Read-only Knex pool for AI queries (SELECT-only, 5s timeout) [implemented]
 │   ├── db/
+│   │   ├── readonlyConnection.ts     # Read-only Knex pool for AI queries (SELECT-only, 5s timeout) [implemented]
 │   │   ├── knexfile.ts               # Knex configuration
 │   │   ├── init-readonly-user.sql    # PostgreSQL read-only user creation script [implemented]
 │   │   ├── migrations/               # Database migrations

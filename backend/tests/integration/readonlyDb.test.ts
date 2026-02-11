@@ -74,8 +74,10 @@ describe('Read-only DB integration', () => {
       await readonlyDb.raw('SELECT 1');
 
       dbAvailable = true;
-    } catch {
+    } catch (error) {
       dbAvailable = false;
+      // eslint-disable-next-line no-console
+      console.warn('Skipping read-only DB integration tests: DB setup failed.', error);
     }
   });
 
@@ -83,8 +85,9 @@ describe('Read-only DB integration', () => {
     if (primaryDb) {
       try {
         await primaryDb.schema.dropTableIfExists('_readonly_test');
-      } catch {
-        // ignore cleanup errors
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.warn('Failed to drop test table during cleanup:', error);
       }
       await primaryDb.destroy();
     }

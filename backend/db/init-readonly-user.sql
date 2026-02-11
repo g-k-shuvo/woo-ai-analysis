@@ -19,9 +19,9 @@ GRANT USAGE ON SCHEMA public TO woo_ai_readonly;
 -- Grant SELECT on all existing tables
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO woo_ai_readonly;
 
--- Grant SELECT on all future tables created by the primary user
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO woo_ai_readonly;
+-- Grant SELECT on all future tables created by the application user (woo_ai)
+ALTER DEFAULT PRIVILEGES FOR ROLE woo_ai IN SCHEMA public GRANT SELECT ON TABLES TO woo_ai_readonly;
 
 -- Explicitly revoke any write privileges (defense-in-depth)
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public FROM woo_ai_readonly;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM woo_ai_readonly;
+ALTER DEFAULT PRIVILEGES FOR ROLE woo_ai IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM woo_ai_readonly;
