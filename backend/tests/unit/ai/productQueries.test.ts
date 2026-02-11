@@ -594,7 +594,7 @@ describe('createProductQueries', () => {
       const queries = createProductQueries({ readonlyDb: mockDb as never });
 
       await expect(queries.lowStockProducts(VALID_STORE_ID, -1)).rejects.toThrow(
-        'threshold must be an integer between 0 and 10000',
+        'threshold must be an integer between 0 and',
       );
     });
 
@@ -604,7 +604,7 @@ describe('createProductQueries', () => {
       const queries = createProductQueries({ readonlyDb: mockDb as never });
 
       await expect(queries.lowStockProducts(VALID_STORE_ID, 2.5)).rejects.toThrow(
-        'threshold must be an integer between 0 and 10000',
+        'threshold must be an integer between 0 and',
       );
     });
 

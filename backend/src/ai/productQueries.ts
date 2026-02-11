@@ -22,6 +22,9 @@ const REVENUE_STATUSES = ['completed', 'processing'] as const;
 const DEFAULT_TOP_SELLERS_LIMIT = 10;
 const MAX_TOP_SELLERS_LIMIT = 100;
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
+const MAX_LOW_STOCK_THRESHOLD = 10000;
+const DEFAULT_CATEGORY_PERFORMANCE_LIMIT = 50;
+const DEFAULT_STOCK_QUERY_LIMIT = 100;
 
 export interface TopSellerResult {
   productName: string;
@@ -66,20 +69,50 @@ function validateLimit(limit: number): void {
   }
 }
 
+async function measureQuery<T>(
+  logContext: Record<string, unknown>,
+  queryName: string,
+  errorMessage: string,
+  queryFn: () => Promise<T>,
+): Promise<T> {
+  const startTime = Date.now();
+  logger.info(logContext, `Product query: ${queryName} start`);
+  try {
+    const result = await queryFn();
+    const durationMs = Date.now() - startTime;
+    const resultCount = Array.isArray(result) ? result.length : undefined;
+    logger.info(
+      { ...logContext, durationMs, resultCount },
+      `Product query: ${queryName} completed`,
+    );
+    return result;
+  } catch (err) {
+    const durationMs = Date.now() - startTime;
+    logger.error(
+      { ...logContext, durationMs, error: (err as Error).message },
+      `Product query: ${queryName} failed`,
+    );
+    throw new AppError(errorMessage, {
+      cause: err instanceof Error ? err : new Error(String(err)),
+    });
+  }
+}
+
 export function createProductQueries(deps: ProductQueryDeps) {
   const { readonlyDb } = deps;
 
-  async function topSellersByQuantity(
+  async function _getTopSellers(
     storeId: string,
-    limit: number = DEFAULT_TOP_SELLERS_LIMIT,
+    limit: number,
+    orderByColumn: 'total_quantity' | 'total_revenue',
   ): Promise<TopSellerResult[]> {
+    const queryName = orderByColumn === 'total_quantity' ? 'topSellersByQuantity' : 'topSellersByRevenue';
+    const errorMsg = `Failed to fetch top sellers by ${orderByColumn === 'total_quantity' ? 'quantity' : 'revenue'}`;
+
     validateStoreId(storeId);
     validateLimit(limit);
 
-    const startTime = Date.now();
-    logger.info({ storeId, limit }, 'Product query: topSellersByQuantity start');
-
-    try {
+    return measureQuery({ storeId, limit }, queryName, errorMsg, async () => {
       const rows = await readonlyDb('order_items as oi')
         .join('products as p', function (this: Knex.JoinClause) {
           this.on('oi.product_id', '=', 'p.id').andOn('p.store_id', '=', readonlyDb.raw('?', [storeId]));
@@ -95,95 +128,35 @@ export function createProductQueries(deps: ProductQueryDeps) {
           readonlyDb.raw('COALESCE(ROUND(SUM(oi.total), 2), 0) AS total_revenue'),
         )
         .groupBy('p.name')
-        .orderBy('total_quantity', 'desc')
+        .orderBy(orderByColumn, 'desc')
         .limit(limit) as unknown as Array<Record<string, unknown>>;
 
-      const results: TopSellerResult[] = rows.map((row) => ({
+      return rows.map((row) => ({
         productName: String(row.product_name ?? ''),
         totalQuantity: parseInt(String(row.total_quantity ?? '0'), 10) || 0,
         totalRevenue: Math.round((parseFloat(String(row.total_revenue ?? '0')) || 0) * 100) / 100,
       }));
+    });
+  }
 
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, limit, durationMs, resultCount: results.length },
-        'Product query: topSellersByQuantity completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, limit, durationMs, error: (err as Error).message },
-        'Product query: topSellersByQuantity failed',
-      );
-      throw new AppError('Failed to fetch top sellers by quantity', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+  async function topSellersByQuantity(
+    storeId: string,
+    limit: number = DEFAULT_TOP_SELLERS_LIMIT,
+  ): Promise<TopSellerResult[]> {
+    return _getTopSellers(storeId, limit, 'total_quantity');
   }
 
   async function topSellersByRevenue(
     storeId: string,
     limit: number = DEFAULT_TOP_SELLERS_LIMIT,
   ): Promise<TopSellerResult[]> {
-    validateStoreId(storeId);
-    validateLimit(limit);
-
-    const startTime = Date.now();
-    logger.info({ storeId, limit }, 'Product query: topSellersByRevenue start');
-
-    try {
-      const rows = await readonlyDb('order_items as oi')
-        .join('products as p', function (this: Knex.JoinClause) {
-          this.on('oi.product_id', '=', 'p.id').andOn('p.store_id', '=', readonlyDb.raw('?', [storeId]));
-        })
-        .join('orders as o', function (this: Knex.JoinClause) {
-          this.on('oi.order_id', '=', 'o.id').andOn('o.store_id', '=', readonlyDb.raw('?', [storeId]));
-        })
-        .where('oi.store_id', storeId)
-        .whereIn('o.status', REVENUE_STATUSES)
-        .select(
-          'p.name as product_name',
-          readonlyDb.raw('COALESCE(SUM(oi.quantity), 0) AS total_quantity'),
-          readonlyDb.raw('COALESCE(ROUND(SUM(oi.total), 2), 0) AS total_revenue'),
-        )
-        .groupBy('p.name')
-        .orderBy('total_revenue', 'desc')
-        .limit(limit) as unknown as Array<Record<string, unknown>>;
-
-      const results: TopSellerResult[] = rows.map((row) => ({
-        productName: String(row.product_name ?? ''),
-        totalQuantity: parseInt(String(row.total_quantity ?? '0'), 10) || 0,
-        totalRevenue: Math.round((parseFloat(String(row.total_revenue ?? '0')) || 0) * 100) / 100,
-      }));
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, limit, durationMs, resultCount: results.length },
-        'Product query: topSellersByRevenue completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, limit, durationMs, error: (err as Error).message },
-        'Product query: topSellersByRevenue failed',
-      );
-      throw new AppError('Failed to fetch top sellers by revenue', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+    return _getTopSellers(storeId, limit, 'total_revenue');
   }
 
   async function categoryPerformance(storeId: string): Promise<CategoryPerformanceResult[]> {
     validateStoreId(storeId);
 
-    const startTime = Date.now();
-    logger.info({ storeId }, 'Product query: categoryPerformance start');
-
-    try {
+    return measureQuery({ storeId }, 'categoryPerformance', 'Failed to fetch category performance', async () => {
       const rows = await readonlyDb('order_items as oi')
         .join('products as p', function (this: Knex.JoinClause) {
           this.on('oi.product_id', '=', 'p.id').andOn('p.store_id', '=', readonlyDb.raw('?', [storeId]));
@@ -202,32 +175,15 @@ export function createProductQueries(deps: ProductQueryDeps) {
         )
         .groupBy('p.category_name')
         .orderByRaw('COALESCE(ROUND(SUM(oi.total), 2), 0) DESC')
-        .limit(50) as unknown as Array<Record<string, unknown>>;
+        .limit(DEFAULT_CATEGORY_PERFORMANCE_LIMIT) as unknown as Array<Record<string, unknown>>;
 
-      const results: CategoryPerformanceResult[] = rows.map((row) => ({
+      return rows.map((row) => ({
         categoryName: String(row.category_name ?? ''),
         totalRevenue: Math.round((parseFloat(String(row.total_revenue ?? '0')) || 0) * 100) / 100,
         totalQuantitySold: parseInt(String(row.total_quantity_sold ?? '0'), 10) || 0,
         productCount: parseInt(String(row.product_count ?? '0'), 10) || 0,
       }));
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, durationMs, resultCount: results.length },
-        'Product query: categoryPerformance completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, durationMs, error: (err as Error).message },
-        'Product query: categoryPerformance failed',
-      );
-      throw new AppError('Failed to fetch category performance', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+    });
   }
 
   async function lowStockProducts(
@@ -236,14 +192,11 @@ export function createProductQueries(deps: ProductQueryDeps) {
   ): Promise<LowStockProduct[]> {
     validateStoreId(storeId);
 
-    if (!Number.isInteger(threshold) || threshold < 0 || threshold > 10000) {
-      throw new ValidationError('threshold must be an integer between 0 and 10000');
+    if (!Number.isInteger(threshold) || threshold < 0 || threshold > MAX_LOW_STOCK_THRESHOLD) {
+      throw new ValidationError(`threshold must be an integer between 0 and ${MAX_LOW_STOCK_THRESHOLD}`);
     }
 
-    const startTime = Date.now();
-    logger.info({ storeId, threshold }, 'Product query: lowStockProducts start');
-
-    try {
+    return measureQuery({ storeId, threshold }, 'lowStockProducts', 'Failed to fetch low stock products', async () => {
       const rows = await readonlyDb('products')
         .where({ store_id: storeId, stock_status: 'instock', status: 'publish' })
         .where('stock_quantity', '<=', threshold)
@@ -256,42 +209,22 @@ export function createProductQueries(deps: ProductQueryDeps) {
           readonlyDb.raw('COALESCE(price, 0) AS price'),
         )
         .orderBy('stock_quantity', 'asc')
-        .limit(100) as unknown as Array<Record<string, unknown>>;
+        .limit(DEFAULT_STOCK_QUERY_LIMIT) as unknown as Array<Record<string, unknown>>;
 
-      const results: LowStockProduct[] = rows.map((row) => ({
+      return rows.map((row) => ({
         productName: String(row.product_name ?? ''),
         sku: row.sku != null ? String(row.sku) : null,
         stockQuantity: parseInt(String(row.stock_quantity ?? '0'), 10) || 0,
         stockStatus: String(row.stock_status ?? ''),
         price: Math.round((parseFloat(String(row.price ?? '0')) || 0) * 100) / 100,
       }));
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, threshold, durationMs, resultCount: results.length },
-        'Product query: lowStockProducts completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, threshold, durationMs, error: (err as Error).message },
-        'Product query: lowStockProducts failed',
-      );
-      throw new AppError('Failed to fetch low stock products', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+    });
   }
 
   async function outOfStockProducts(storeId: string): Promise<LowStockProduct[]> {
     validateStoreId(storeId);
 
-    const startTime = Date.now();
-    logger.info({ storeId }, 'Product query: outOfStockProducts start');
-
-    try {
+    return measureQuery({ storeId }, 'outOfStockProducts', 'Failed to fetch out of stock products', async () => {
       const rows = await readonlyDb('products')
         .where({ store_id: storeId, stock_status: 'outofstock', status: 'publish' })
         .select(
@@ -302,33 +235,16 @@ export function createProductQueries(deps: ProductQueryDeps) {
           readonlyDb.raw('COALESCE(price, 0) AS price'),
         )
         .orderBy('name', 'asc')
-        .limit(100) as unknown as Array<Record<string, unknown>>;
+        .limit(DEFAULT_STOCK_QUERY_LIMIT) as unknown as Array<Record<string, unknown>>;
 
-      const results: LowStockProduct[] = rows.map((row) => ({
+      return rows.map((row) => ({
         productName: String(row.product_name ?? ''),
         sku: row.sku != null ? String(row.sku) : null,
         stockQuantity: parseInt(String(row.stock_quantity ?? '0'), 10) || 0,
         stockStatus: String(row.stock_status ?? ''),
         price: Math.round((parseFloat(String(row.price ?? '0')) || 0) * 100) / 100,
       }));
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, durationMs, resultCount: results.length },
-        'Product query: outOfStockProducts completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, durationMs, error: (err as Error).message },
-        'Product query: outOfStockProducts failed',
-      );
-      throw new AppError('Failed to fetch out of stock products', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+    });
   }
 
   async function productSalesByPeriod(
@@ -350,53 +266,38 @@ export function createProductQueries(deps: ProductQueryDeps) {
       throw new ValidationError('startDate must be before or equal to endDate');
     }
 
-    const startTime = Date.now();
-    logger.info({ storeId, startDate, endDate, limit }, 'Product query: productSalesByPeriod start');
+    return measureQuery(
+      { storeId, startDate, endDate, limit },
+      'productSalesByPeriod',
+      'Failed to fetch product sales by period',
+      async () => {
+        const rows = await readonlyDb('order_items as oi')
+          .join('products as p', function (this: Knex.JoinClause) {
+            this.on('oi.product_id', '=', 'p.id').andOn('p.store_id', '=', readonlyDb.raw('?', [storeId]));
+          })
+          .join('orders as o', function (this: Knex.JoinClause) {
+            this.on('oi.order_id', '=', 'o.id').andOn('o.store_id', '=', readonlyDb.raw('?', [storeId]));
+          })
+          .where('oi.store_id', storeId)
+          .whereIn('o.status', REVENUE_STATUSES)
+          .where('o.date_created', '>=', startDate)
+          .where('o.date_created', '<', endDate)
+          .select(
+            'p.name as product_name',
+            readonlyDb.raw('COALESCE(SUM(oi.quantity), 0) AS total_quantity'),
+            readonlyDb.raw('COALESCE(ROUND(SUM(oi.total), 2), 0) AS total_revenue'),
+          )
+          .groupBy('p.name')
+          .orderBy('total_revenue', 'desc')
+          .limit(limit) as unknown as Array<Record<string, unknown>>;
 
-    try {
-      const rows = await readonlyDb('order_items as oi')
-        .join('products as p', function (this: Knex.JoinClause) {
-          this.on('oi.product_id', '=', 'p.id').andOn('p.store_id', '=', readonlyDb.raw('?', [storeId]));
-        })
-        .join('orders as o', function (this: Knex.JoinClause) {
-          this.on('oi.order_id', '=', 'o.id').andOn('o.store_id', '=', readonlyDb.raw('?', [storeId]));
-        })
-        .where('oi.store_id', storeId)
-        .whereIn('o.status', REVENUE_STATUSES)
-        .where('o.date_created', '>=', startDate)
-        .where('o.date_created', '<', endDate)
-        .select(
-          'p.name as product_name',
-          readonlyDb.raw('COALESCE(SUM(oi.quantity), 0) AS total_quantity'),
-          readonlyDb.raw('COALESCE(ROUND(SUM(oi.total), 2), 0) AS total_revenue'),
-        )
-        .groupBy('p.name')
-        .orderBy('total_revenue', 'desc')
-        .limit(limit) as unknown as Array<Record<string, unknown>>;
-
-      const results: ProductSalesByPeriodResult[] = rows.map((row) => ({
-        productName: String(row.product_name ?? ''),
-        totalQuantity: parseInt(String(row.total_quantity ?? '0'), 10) || 0,
-        totalRevenue: Math.round((parseFloat(String(row.total_revenue ?? '0')) || 0) * 100) / 100,
-      }));
-
-      const durationMs = Date.now() - startTime;
-      logger.info(
-        { storeId, startDate, endDate, limit, durationMs, resultCount: results.length },
-        'Product query: productSalesByPeriod completed',
-      );
-
-      return results;
-    } catch (err) {
-      const durationMs = Date.now() - startTime;
-      logger.error(
-        { storeId, startDate, endDate, limit, durationMs, error: (err as Error).message },
-        'Product query: productSalesByPeriod failed',
-      );
-      throw new AppError('Failed to fetch product sales by period', {
-        cause: err instanceof Error ? err : new Error(String(err)),
-      });
-    }
+        return rows.map((row) => ({
+          productName: String(row.product_name ?? ''),
+          totalQuantity: parseInt(String(row.total_quantity ?? '0'), 10) || 0,
+          totalRevenue: Math.round((parseFloat(String(row.total_revenue ?? '0')) || 0) * 100) / 100,
+        }));
+      },
+    );
   }
 
   return {
