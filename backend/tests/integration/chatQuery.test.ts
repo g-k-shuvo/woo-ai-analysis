@@ -1,6 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import type { AIQueryResult, QueryExecutionResult, ChartSpec, ChartConfiguration } from '../../src/ai/types.js';
-import type { ChatResponse } from '../../src/services/chatService.js';
 
 /**
  * Integration tests for the chat query flow.
@@ -25,7 +24,6 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
 // ── Import after mocks ─────────────────────────────────────────────
 
 const { createChatService } = await import('../../src/services/chatService.js');
-const { toChartConfig } = await import('../../src/ai/chartSpec.js');
 const { ValidationError, AIError } = await import('../../src/utils/errors.js');
 
 // ── Helpers ─────────────────────────────────────────────────────────

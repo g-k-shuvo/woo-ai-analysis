@@ -57,6 +57,7 @@ final class Ajax_Handler {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$question = isset( $_POST['question'] )
@@ -67,6 +68,7 @@ final class Ajax_Handler {
 			wp_send_json_error(
 				array( 'message' => __( 'Question cannot be empty.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		$api_url    = get_option( 'waa_api_url', '' );
@@ -76,6 +78,7 @@ final class Ajax_Handler {
 			wp_send_json_error(
 				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		$response = wp_remote_post(
@@ -96,6 +99,7 @@ final class Ajax_Handler {
 			wp_send_json_error(
 				array( 'message' => $response->get_error_message() )
 			);
+			return;
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
@@ -107,6 +111,7 @@ final class Ajax_Handler {
 				$error_msg = sanitize_text_field( $body['error']['message'] );
 			}
 			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
 		}
 
 		wp_send_json_success( $body['data'] );
@@ -116,4 +121,9 @@ final class Ajax_Handler {
 	 * Prevent cloning.
 	 */
 	private function __clone() {}
+
+	/**
+	 * Prevent unserialization.
+	 */
+	private function __wakeup() {}
 }

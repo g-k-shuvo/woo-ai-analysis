@@ -19,6 +19,7 @@ const chatQuerySchema = {
   body: {
     type: 'object' as const,
     required: ['question'],
+    additionalProperties: false,
     properties: {
       question: { type: 'string' as const, minLength: 1, maxLength: 2000 },
     },
@@ -29,9 +30,9 @@ export async function chatQueryRoutes(fastify: FastifyInstance, deps: ChatQueryD
   const { chatService } = deps;
 
   // POST /api/chat/query — ask a question about store data (auth required)
-  fastify.post('/api/chat/query', { schema: chatQuerySchema }, async (request, reply) => {
+  fastify.post<{ Body: { question: string } }>('/api/chat/query', { schema: chatQuerySchema }, async (request, reply) => {
     const store = request.store!;
-    const { question } = request.body as { question: string };
+    const { question } = request.body;
 
     const result = await chatService.ask(store.id, question);
 

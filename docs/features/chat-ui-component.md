@@ -40,7 +40,7 @@
 - FR1: ChatWindow renders a scrollable message thread with user and assistant messages
 - FR2: useChat hook manages messages array, loading state, error state, and sendMessage function
 - FR3: PHP AJAX handler validates nonce, checks capability, sanitizes input, proxies to backend
-- FR4: Backend POST /api/chat/query accepts { question } body, returns { answer, sql, chartSpec, data }
+- FR4: Backend POST /api/chat/query accepts { question } body, returns a response object with a `data` property containing `{ answer, sql, rows, rowCount, durationMs, chartSpec, chartConfig }`
 - FR5: Backend chatService orchestrates: pipeline.processQuestion → executor.execute → chartSpec.toChartConfig
 - FR6: Chat messages include timestamp and sender role (user/assistant/error)
 
