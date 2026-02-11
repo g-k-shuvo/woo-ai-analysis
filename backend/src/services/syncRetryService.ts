@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { logger } from '../utils/logger.js';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, ValidationError } from '../utils/errors.js';
 
 export const MAX_RETRIES = 5;
 export const BASE_BACKOFF_SECONDS = 30;
@@ -36,11 +36,13 @@ export interface SyncRetryServiceDeps {
 }
 
 export function calculateBackoff(retryCount: number): number {
-  const backoffSeconds = Math.min(
+  const base = Math.min(
     Math.pow(2, retryCount) * BASE_BACKOFF_SECONDS,
     MAX_BACKOFF_SECONDS,
   );
-  return backoffSeconds;
+  // Add +/- 20% jitter to avoid thundering herd
+  const jitter = base * 0.2 * (Math.random() * 2 - 1);
+  return Math.max(1, Math.round(base + jitter));
 }
 
 export function createSyncRetryService(deps: SyncRetryServiceDeps) {
@@ -65,46 +67,51 @@ export function createSyncRetryService(deps: SyncRetryServiceDeps) {
   }
 
   async function scheduleRetry(storeId: string, syncLogId: string): Promise<RetryScheduleResult> {
-    const syncLog = await db('sync_logs')
-      .select('id', 'retry_count', 'status')
+    // Atomic conditional update: only updates if status=failed AND retry_count < MAX_RETRIES
+    const updatedCount = await db('sync_logs')
+      .where({ id: syncLogId, store_id: storeId, status: 'failed' })
+      .where('retry_count', '<', MAX_RETRIES)
+      .update({
+        retry_count: db.raw('retry_count + 1'),
+      });
+
+    if (updatedCount === 0) {
+      // Determine the specific reason for failure
+      const syncLog = await db('sync_logs')
+        .select('id', 'status', 'retry_count')
+        .where({ id: syncLogId, store_id: storeId })
+        .first<{ id: string; status: string; retry_count: number } | undefined>();
+
+      if (!syncLog) {
+        throw new NotFoundError('Sync log not found');
+      }
+      if (syncLog.status !== 'failed') {
+        throw new ValidationError('Sync log is not in failed state -- only failed syncs can be retried');
+      }
+      if (syncLog.retry_count >= MAX_RETRIES) {
+        return { syncLogId, status: 'max_retries_reached', nextRetryAt: null };
+      }
+    }
+
+    // Read the updated retry_count to compute the correct backoff
+    const updated = await db('sync_logs')
+      .select('retry_count')
       .where({ id: syncLogId, store_id: storeId })
-      .first<{ id: string; retry_count: number; status: string } | undefined>();
+      .first<{ retry_count: number }>();
 
-    if (!syncLog) {
-      throw new NotFoundError('Sync log not found');
-    }
-
-    if (syncLog.status !== 'failed') {
-      throw new NotFoundError('Sync log is not in failed state');
-    }
-
-    if (syncLog.retry_count >= MAX_RETRIES) {
-      return {
-        syncLogId,
-        status: 'max_retries_reached',
-        nextRetryAt: null,
-      };
-    }
-
-    const backoffSeconds = calculateBackoff(syncLog.retry_count);
+    const backoffSeconds = calculateBackoff(updated!.retry_count - 1);
     const nextRetryAt = new Date(Date.now() + backoffSeconds * 1000).toISOString();
 
     await db('sync_logs')
       .where({ id: syncLogId, store_id: storeId })
-      .update({
-        next_retry_at: nextRetryAt,
-      });
+      .update({ next_retry_at: nextRetryAt });
 
     logger.info(
-      { storeId, syncLogId, retryCount: syncLog.retry_count, backoffSeconds, nextRetryAt },
+      { storeId, syncLogId, retryCount: updated!.retry_count, backoffSeconds, nextRetryAt },
       'Retry scheduled for failed sync',
     );
 
-    return {
-      syncLogId,
-      status: 'retry_scheduled',
-      nextRetryAt,
-    };
+    return { syncLogId, status: 'retry_scheduled', nextRetryAt };
   }
 
   async function markRetryStarted(storeId: string, syncLogId: string): Promise<void> {
@@ -149,7 +156,7 @@ export function createSyncRetryService(deps: SyncRetryServiceDeps) {
       .where('started_at', '<', thresholdDate)
       .update({
         status: 'failed',
-        error_message: 'Sync stalled — exceeded 15 minute threshold',
+        error_message: `Sync stalled -- exceeded ${STALE_SYNC_THRESHOLD_MINUTES} minute threshold`,
         completed_at: db.fn.now(),
       });
 

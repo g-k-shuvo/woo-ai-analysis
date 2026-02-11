@@ -1,5 +1,5 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
-import { NotFoundError } from '../../src/utils/errors.js';
+import { NotFoundError, ValidationError } from '../../src/utils/errors.js';
 
 // ESM-compatible mocks — must be set up BEFORE dynamic import
 jest.unstable_mockModule('../../src/utils/logger.js', () => ({
@@ -10,7 +10,7 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
   },
 }));
 
-const { createSyncRetryService, calculateBackoff, MAX_RETRIES, BASE_BACKOFF_SECONDS, MAX_BACKOFF_SECONDS } =
+const { createSyncRetryService, calculateBackoff, MAX_RETRIES, STALE_SYNC_THRESHOLD_MINUTES } =
   await import('../../src/services/syncRetryService.js');
 
 interface MockQueryBuilder {
@@ -47,19 +47,37 @@ function createMockDb() {
 }
 
 describe('calculateBackoff', () => {
-  it('returns base backoff for retry 0', () => {
-    expect(calculateBackoff(0)).toBe(BASE_BACKOFF_SECONDS); // 30
+  it('returns a value near base backoff for retry 0', () => {
+    const result = calculateBackoff(0);
+    // With +/- 20% jitter: 30 * 0.8 = 24, 30 * 1.2 = 36
+    expect(result).toBeGreaterThanOrEqual(24);
+    expect(result).toBeLessThanOrEqual(36);
   });
 
-  it('doubles backoff for each retry', () => {
-    expect(calculateBackoff(1)).toBe(60);  // 2^1 * 30
-    expect(calculateBackoff(2)).toBe(120); // 2^2 * 30
-    expect(calculateBackoff(3)).toBe(240); // 2^3 * 30
-    expect(calculateBackoff(4)).toBe(480); // 2^4 * 30
+  it('doubles base backoff for each retry (within jitter range)', () => {
+    // retry 1: base=60, range=[48,72]
+    expect(calculateBackoff(1)).toBeGreaterThanOrEqual(48);
+    expect(calculateBackoff(1)).toBeLessThanOrEqual(72);
+    // retry 2: base=120, range=[96,144]
+    expect(calculateBackoff(2)).toBeGreaterThanOrEqual(96);
+    expect(calculateBackoff(2)).toBeLessThanOrEqual(144);
+    // retry 3: base=240, range=[192,288]
+    expect(calculateBackoff(3)).toBeGreaterThanOrEqual(192);
+    expect(calculateBackoff(3)).toBeLessThanOrEqual(288);
+    // retry 4: base=480, range=[384,576]
+    expect(calculateBackoff(4)).toBeGreaterThanOrEqual(384);
+    expect(calculateBackoff(4)).toBeLessThanOrEqual(576);
   });
 
-  it('caps backoff at MAX_BACKOFF_SECONDS', () => {
-    expect(calculateBackoff(10)).toBe(MAX_BACKOFF_SECONDS); // 2^10 * 30 = 30720, capped at 900
+  it('caps backoff at MAX_BACKOFF_SECONDS (within jitter range)', () => {
+    const result = calculateBackoff(10);
+    // base=900 (capped), range=[720,1080]
+    expect(result).toBeGreaterThanOrEqual(720);
+    expect(result).toBeLessThanOrEqual(1080);
+  });
+
+  it('always returns at least 1', () => {
+    expect(calculateBackoff(0)).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -140,6 +158,9 @@ describe('SyncRetryService', () => {
 
   describe('scheduleRetry', () => {
     it('throws NotFoundError when sync log does not exist', async () => {
+      // Atomic update returns 0 (no matching rows)
+      mockQueryBuilder.update.mockResolvedValueOnce(0);
+      // Re-read returns undefined (not found)
       mockQueryBuilder.first.mockResolvedValueOnce(undefined);
 
       const service = createSyncRetryService({ db });
@@ -147,7 +168,10 @@ describe('SyncRetryService', () => {
       await expect(service.scheduleRetry('store-123', 'nonexistent')).rejects.toThrow(NotFoundError);
     });
 
-    it('throws NotFoundError when sync log is not in failed state', async () => {
+    it('throws ValidationError when sync log is not in failed state', async () => {
+      // Atomic update returns 0 (status doesn't match)
+      mockQueryBuilder.update.mockResolvedValueOnce(0);
+      // Re-read shows status is not 'failed'
       mockQueryBuilder.first.mockResolvedValueOnce({
         id: 'log-1',
         retry_count: 0,
@@ -156,10 +180,13 @@ describe('SyncRetryService', () => {
 
       const service = createSyncRetryService({ db });
 
-      await expect(service.scheduleRetry('store-123', 'log-1')).rejects.toThrow(NotFoundError);
+      await expect(service.scheduleRetry('store-123', 'log-1')).rejects.toThrow(ValidationError);
     });
 
     it('returns max_retries_reached when retry count >= MAX_RETRIES', async () => {
+      // Atomic update returns 0 (retry_count filter)
+      mockQueryBuilder.update.mockResolvedValueOnce(0);
+      // Re-read shows max retries hit
       mockQueryBuilder.first.mockResolvedValueOnce({
         id: 'log-1',
         retry_count: MAX_RETRIES,
@@ -173,30 +200,34 @@ describe('SyncRetryService', () => {
       expect(result.nextRetryAt).toBeNull();
     });
 
-    it('schedules retry with exponential backoff for failed sync with retry_count < MAX_RETRIES', async () => {
-      mockQueryBuilder.first.mockResolvedValueOnce({
-        id: 'log-1',
-        retry_count: 2,
-        status: 'failed',
-      });
+    it('atomically increments retry_count and schedules next_retry_at', async () => {
+      // Atomic update succeeds (1 row updated)
+      mockQueryBuilder.update.mockResolvedValueOnce(1);
+      // Re-read returns updated retry_count
+      mockQueryBuilder.first.mockResolvedValueOnce({ retry_count: 3 });
+      // Second update for next_retry_at succeeds
+      mockQueryBuilder.update.mockResolvedValueOnce(1);
 
       const service = createSyncRetryService({ db });
-      const beforeCall = Date.now();
       const result = await service.scheduleRetry('store-123', 'log-1');
 
       expect(result.status).toBe('retry_scheduled');
       expect(result.syncLogId).toBe('log-1');
       expect(result.nextRetryAt).not.toBeNull();
 
-      // Backoff for retry_count=2 should be 2^2 * 30 = 120 seconds
-      const scheduledTime = new Date(result.nextRetryAt!).getTime();
-      const expectedMin = beforeCall + 120 * 1000 - 1000; // 1s tolerance
-      const expectedMax = beforeCall + 120 * 1000 + 1000;
-      expect(scheduledTime).toBeGreaterThanOrEqual(expectedMin);
-      expect(scheduledTime).toBeLessThanOrEqual(expectedMax);
+      // Verify atomic update includes retry_count increment
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          retry_count: 'retry_count + 1',
+        }),
+      );
 
-      // Verify DB update was called with store_id filter
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith({ id: 'log-1', store_id: 'store-123' });
+      // Verify store_id is in the WHERE clause
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'log-1', store_id: 'store-123', status: 'failed' }),
+      );
+
+      // Verify next_retry_at is set in second update
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           next_retry_at: expect.any(String),
@@ -204,17 +235,20 @@ describe('SyncRetryService', () => {
       );
     });
 
-    it('uses store_id filter when fetching sync log', async () => {
-      mockQueryBuilder.first.mockResolvedValueOnce({
-        id: 'log-1',
-        retry_count: 0,
-        status: 'failed',
-      });
+    it('uses store_id filter in all database queries', async () => {
+      mockQueryBuilder.update.mockResolvedValueOnce(1);
+      mockQueryBuilder.first.mockResolvedValueOnce({ retry_count: 1 });
+      mockQueryBuilder.update.mockResolvedValueOnce(1);
 
       const service = createSyncRetryService({ db });
       await service.scheduleRetry('store-123', 'log-1');
 
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith({ id: 'log-1', store_id: 'store-123' });
+      // Every where call should include store_id
+      const whereCalls = mockQueryBuilder.where.mock.calls;
+      const storeIdCalls = whereCalls.filter(
+        (call: unknown[]) => typeof call[0] === 'object' && (call[0] as Record<string, unknown>).store_id === 'store-123',
+      );
+      expect(storeIdCalls.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -228,6 +262,7 @@ describe('SyncRetryService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'running',
+          retry_count: 'retry_count + 1',
           next_retry_at: null,
           error_message: null,
           completed_at: null,
@@ -290,7 +325,7 @@ describe('SyncRetryService', () => {
       expect(Math.abs(thresholdDate - expectedThreshold)).toBeLessThan(2000); // 2s tolerance
     });
 
-    it('updates status to failed with stale error message', async () => {
+    it('uses STALE_SYNC_THRESHOLD_MINUTES constant in error message', async () => {
       mockQueryBuilder.update.mockResolvedValueOnce(1);
 
       const service = createSyncRetryService({ db });
@@ -299,7 +334,7 @@ describe('SyncRetryService', () => {
       expect(mockQueryBuilder.update).toHaveBeenCalledWith(
         expect.objectContaining({
           status: 'failed',
-          error_message: 'Sync stalled — exceeded 15 minute threshold',
+          error_message: `Sync stalled -- exceeded ${STALE_SYNC_THRESHOLD_MINUTES} minute threshold`,
         }),
       );
     });

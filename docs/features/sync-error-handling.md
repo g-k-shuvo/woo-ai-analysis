@@ -96,10 +96,6 @@
 
 ## 8. Code Impact
 
-### Files/modules likely to change
-- `backend/src/services/syncService.ts` — add retry-related methods
-- `backend/src/routes/sync/status.ts` — extend with error/retry endpoints
-
 ### New files/modules
 - `backend/db/migrations/20260211000011_add_sync_retry_columns.ts`
 - `backend/src/services/syncRetryService.ts`
