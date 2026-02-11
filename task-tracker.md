@@ -21,7 +21,7 @@
 - [x] **2.7** Sync error handling — Retry logic, error logging, fallback cron
 
 ### Sprint 3: AI Core (Week 5–8)
-- [ ] **3.1** AI system prompt — Schema injection + few-shot examples
+- [x] **3.1** AI system prompt — Schema injection + few-shot examples
 - [ ] **3.2** NL→SQL pipeline — Question → OpenAI → SQL → validation
 - [ ] **3.3** SQL validator — SELECT-only check, store_id check, timeout
 - [ ] **3.4** Read-only DB user — PostgreSQL user with SELECT-only permissions
