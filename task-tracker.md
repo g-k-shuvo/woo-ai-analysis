@@ -17,7 +17,7 @@
 - [x] **2.3** Initial full sync — Orders batch read + send to backend
 - [x] **2.4** Initial full sync — Products + Customers + Categories
 - [x] **2.5** Incremental sync — WooCommerce webhook registration + handlers
-- [ ] **2.6** Sync status API — Progress tracking + WP admin progress bar
+- [x] **2.6** Sync status API — Progress tracking + WP admin progress bar
 - [ ] **2.7** Sync error handling — Retry logic, error logging, fallback cron
 
 ### Sprint 3: AI Core (Week 5–8)

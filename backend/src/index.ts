@@ -14,6 +14,7 @@ import { syncProductsRoutes } from './routes/sync/products.js';
 import { syncCustomersRoutes } from './routes/sync/customers.js';
 import { syncCategoriesRoutes } from './routes/sync/categories.js';
 import { syncWebhookRoutes } from './routes/sync/webhook.js';
+import { syncStatusRoutes } from './routes/sync/status.js';
 
 const startTime = Date.now();
 
@@ -88,6 +89,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => syncWebhookRoutes(instance, { syncService }),
+);
+
+await fastify.register(
+  async (instance) => syncStatusRoutes(instance, { syncService }),
 );
 
 // Graceful shutdown

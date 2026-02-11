@@ -71,6 +71,37 @@ export interface UpsertResult {
   syncLogId: string;
 }
 
+export interface SyncLogEntry {
+  id: string;
+  syncType: string;
+  recordsSynced: number;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  errorMessage: string | null;
+}
+
+interface SyncLogDbRow {
+  id: string;
+  sync_type: string;
+  records_synced: number;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
+export interface SyncStatusResult {
+  lastSyncAt: string | null;
+  recordCounts: {
+    orders: number;
+    products: number;
+    customers: number;
+    categories: number;
+  };
+  recentSyncs: SyncLogEntry[];
+}
+
 export type UpsertOrdersResult = UpsertResult;
 
 export interface SyncServiceDeps {
@@ -611,11 +642,58 @@ export function createSyncService(deps: SyncServiceDeps) {
     }
   }
 
+  async function getSyncStatus(storeId: string): Promise<SyncStatusResult> {
+    // Fetch store's last_sync_at
+    const store = await db('stores')
+      .select('last_sync_at')
+      .where({ id: storeId })
+      .first<{ last_sync_at: string | null } | undefined>();
+
+    const lastSyncAt = store?.last_sync_at ?? null;
+
+    // Count records per entity type — all filtered by store_id
+    const [ordersCount, productsCount, customersCount, categoriesCount] = await Promise.all([
+      db('orders').where({ store_id: storeId }).count('* as count').first<{ count: string }>(),
+      db('products').where({ store_id: storeId }).count('* as count').first<{ count: string }>(),
+      db('customers').where({ store_id: storeId }).count('* as count').first<{ count: string }>(),
+      db('categories').where({ store_id: storeId }).count('* as count').first<{ count: string }>(),
+    ]);
+
+    // Fetch recent sync logs (last 10)
+    const syncLogs = await db('sync_logs')
+      .select('id', 'sync_type', 'records_synced', 'status', 'started_at', 'completed_at', 'error_message')
+      .where({ store_id: storeId })
+      .orderBy('started_at', 'desc')
+      .limit(10);
+
+    const recentSyncs: SyncLogEntry[] = (syncLogs as SyncLogDbRow[]).map((log) => ({
+      id: log.id,
+      syncType: log.sync_type,
+      recordsSynced: log.records_synced,
+      status: log.status,
+      startedAt: log.started_at,
+      completedAt: log.completed_at,
+      errorMessage: log.error_message,
+    }));
+
+    return {
+      lastSyncAt,
+      recordCounts: {
+        orders: Number(ordersCount?.count ?? 0),
+        products: Number(productsCount?.count ?? 0),
+        customers: Number(customersCount?.count ?? 0),
+        categories: Number(categoriesCount?.count ?? 0),
+      },
+      recentSyncs,
+    };
+  }
+
   return {
     upsertOrders,
     upsertProducts,
     upsertCustomers,
     upsertCategories,
+    getSyncStatus,
   };
 }
 

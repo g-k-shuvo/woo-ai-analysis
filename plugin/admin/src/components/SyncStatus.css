@@ -1,0 +1,76 @@
+.waa-sync-status {
+  margin-top: 20px;
+}
+
+.waa-sync-status__health {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waa-sync-status__health-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.waa-sync-status__health-dot--healthy {
+  background-color: #00a32a;
+}
+
+.waa-sync-status__health-dot--running {
+  background-color: #dba617;
+}
+
+.waa-sync-status__health-dot--failed {
+  background-color: #d63638;
+}
+
+.waa-sync-status__running-banner {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: #fff8e1;
+  border: 1px solid #dba617;
+  border-radius: 4px;
+}
+
+.waa-sync-status__running-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waa-sync-status__counts-table {
+  max-width: 400px;
+}
+
+.waa-sync-status__recent-heading {
+  margin-top: 20px;
+}
+
+.waa-sync-status__badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.waa-sync-status__badge--completed {
+  background-color: #00a32a;
+}
+
+.waa-sync-status__badge--running {
+  background-color: #dba617;
+}
+
+.waa-sync-status__badge--failed {
+  background-color: #d63638;
+}
+
+.waa-sync-status__error-text {
+  color: #d63638;
+}
