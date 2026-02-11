@@ -452,4 +452,118 @@ describe('SyncService', () => {
       expect(customerSelectCall).toBeUndefined();
     });
   });
+
+  describe('syncType parameter (webhook support)', () => {
+    it('upsertOrders uses custom syncType for sync log when provided', async () => {
+      const service = createSyncService({ db });
+      await service.upsertOrders('store-123', [], 'webhook:orders');
+
+      expect(db).toHaveBeenCalledWith('sync_logs');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          store_id: 'store-123',
+          sync_type: 'webhook:orders',
+          status: 'running',
+        }),
+      );
+    });
+
+    it('upsertOrders defaults sync_type to orders when no syncType given', async () => {
+      const service = createSyncService({ db });
+      await service.upsertOrders('store-123', []);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sync_type: 'orders',
+        }),
+      );
+    });
+
+    it('upsertProducts uses custom syncType for sync log when provided', async () => {
+      const service = createSyncService({ db });
+      await service.upsertProducts('store-123', [], 'webhook:products');
+
+      expect(db).toHaveBeenCalledWith('sync_logs');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          store_id: 'store-123',
+          sync_type: 'webhook:products',
+          status: 'running',
+        }),
+      );
+    });
+
+    it('upsertProducts defaults sync_type to products when no syncType given', async () => {
+      const service = createSyncService({ db });
+      await service.upsertProducts('store-123', []);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sync_type: 'products',
+        }),
+      );
+    });
+
+    it('upsertCustomers uses custom syncType for sync log when provided', async () => {
+      const service = createSyncService({ db });
+      await service.upsertCustomers('store-123', [], 'webhook:customers');
+
+      expect(db).toHaveBeenCalledWith('sync_logs');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          store_id: 'store-123',
+          sync_type: 'webhook:customers',
+          status: 'running',
+        }),
+      );
+    });
+
+    it('upsertCustomers defaults sync_type to customers when no syncType given', async () => {
+      const service = createSyncService({ db });
+      await service.upsertCustomers('store-123', []);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sync_type: 'customers',
+        }),
+      );
+    });
+
+    it('upsertCategories uses custom syncType for sync log when provided', async () => {
+      const service = createSyncService({ db });
+      await service.upsertCategories('store-123', [], 'webhook:categories');
+
+      expect(db).toHaveBeenCalledWith('sync_logs');
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          store_id: 'store-123',
+          sync_type: 'webhook:categories',
+          status: 'running',
+        }),
+      );
+    });
+
+    it('upsertCategories defaults sync_type to categories when no syncType given', async () => {
+      const service = createSyncService({ db });
+      await service.upsertCategories('store-123', []);
+
+      expect(mockQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sync_type: 'categories',
+        }),
+      );
+    });
+
+    it('upsertOrders with webhook syncType still processes records correctly', async () => {
+      const service = createSyncService({ db });
+      const result = await service.upsertOrders('store-123', [makeValidOrder()], 'webhook:orders');
+
+      expect(result.syncedCount).toBe(1);
+      expect(result.skippedCount).toBe(0);
+      expect(result.syncLogId).toBe('sync-log-uuid');
+      // Should still use onConflict merge
+      expect(trxQueryBuilder.onConflict).toHaveBeenCalledWith(['store_id', 'wc_order_id']);
+      expect(trxQueryBuilder.merge).toHaveBeenCalled();
+    });
+  });
 });

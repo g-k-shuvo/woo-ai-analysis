@@ -21,7 +21,7 @@ woo-ai-analytics/
 │   │   ├── class-settings.php         # Settings page & API key management
 │   │   ├── class-sync-manager.php     # Data sync engine (full + incremental)
 │   │   ├── class-ajax-handler.php     # AJAX endpoints (chat, sync status)
-│   │   ├── class-webhook-handler.php  # WooCommerce webhook registration & handling
+│   │   ├── class-webhooks.php          # WooCommerce incremental sync hooks (implemented)
 │   │   └── class-admin-ui.php         # Admin page rendering & script enqueue
 │   ├── admin/                   # React admin UI source
 │   │   ├── src/
@@ -52,7 +52,8 @@ woo-ai-analytics/
 │   │   │   │   ├── orders.ts         # POST /api/sync/orders
 │   │   │   │   ├── products.ts       # POST /api/sync/products
 │   │   │   │   ├── customers.ts      # POST /api/sync/customers
-│   │   │   │   └── categories.ts     # POST /api/sync/categories
+│   │   │   │   ├── categories.ts     # POST /api/sync/categories
+│   │   │   │   └── webhook.ts        # POST /api/sync/webhook (incremental sync)
 │   │   │   ├── chat/
 │   │   │   │   └── query.ts          # POST /api/chat/query
 │   │   │   └── dashboards/

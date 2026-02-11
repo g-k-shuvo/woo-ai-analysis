@@ -16,7 +16,7 @@
 - [x] **2.2** Auth middleware — API key validation on all backend routes
 - [x] **2.3** Initial full sync — Orders batch read + send to backend
 - [x] **2.4** Initial full sync — Products + Customers + Categories
-- [ ] **2.5** Incremental sync — WooCommerce webhook registration + handlers
+- [x] **2.5** Incremental sync — WooCommerce webhook registration + handlers
 - [ ] **2.6** Sync status API — Progress tracking + WP admin progress bar
 - [ ] **2.7** Sync error handling — Retry logic, error logging, fallback cron
 
