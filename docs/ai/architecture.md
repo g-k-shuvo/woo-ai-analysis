@@ -44,6 +44,7 @@ Store Owner → WP Admin Chat UI → Plugin AJAX → SaaS Backend API
 - **System Prompt**: Injects store's data schema (tables, columns, date ranges)
 - **NL→SQL**: Converts natural language question to validated SQL query
 - **Query Validator**: Ensures SELECT-only, has store_id, timeout enforced
+- **Query Executor**: Runs validated SQL via read-only DB, returns rows + rowCount + durationMs
 - **Chart Spec Generator**: Determines chart type and config from query results
 - **Response Assembler**: Combines text answer + chart + raw data table
 

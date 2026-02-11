@@ -80,6 +80,7 @@ woo-ai-analytics/
 │   │       ├── types.ts              # Shared AI pipeline types (ChartSpec, AIQueryResult, etc.) [implemented]
 │   │       ├── pipeline.ts           # Main NL→SQL→Result pipeline (OpenAI integration) [implemented]
 │   │       ├── sqlValidator.ts       # SQL validation (SELECT-only, store_id, LIMIT, injection prevention) [implemented]
+│   │       ├── queryExecutor.ts     # Execute validated SQL via read-only DB, return rows + metadata [implemented]
 │   │       └── chartSpec.ts          # AI → Chart.js config converter (planned)
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
@@ -98,13 +99,15 @@ woo-ai-analytics/
 │   │   │   │   ├── examples.test.ts       # Few-shot examples tests [implemented]
 │   │   │   │   ├── schemaContext.test.ts   # Schema context service tests [implemented]
 │   │   │   │   ├── sqlValidator.test.ts    # SQL validator tests [implemented]
-│   │   │   │   └── pipeline.test.ts        # NL→SQL pipeline tests [implemented]
+│   │   │   │   ├── pipeline.test.ts        # NL→SQL pipeline tests [implemented]
+│   │   │   │   └── queryExecutor.test.ts  # Query executor unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
 │   │   │   ├── aiPipeline.test.ts          # AI pipeline integration tests [implemented]
 │   │   │   ├── readonlyDb.test.ts          # Read-only DB enforcement tests [implemented]
+│   │   │   ├── queryExecution.test.ts     # Query executor integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev
