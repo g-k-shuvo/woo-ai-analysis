@@ -35,7 +35,7 @@
 ### Sprint 4: Chat UI & Charts (Week 9–10)
 - [x] **4.1** Chat UI component — React message thread in WP admin
 - [x] **4.2** Chat input — Message box + send + suggested questions
-- [ ] **4.3** AJAX handler — Plugin proxies chat requests (with nonce)
+- [x] **4.3** AJAX handler — Plugin proxies chat requests (with nonce)
 - [ ] **4.4** Chart.js integration — Client-side interactive charts
 - [ ] **4.5** Server-side chart rendering — chartjs-node-canvas → PNG
 - [ ] **4.6** Chart types — Bar, line, pie, doughnut, table view

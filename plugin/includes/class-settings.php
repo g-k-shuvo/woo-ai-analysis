@@ -57,6 +57,7 @@ final class Settings {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$api_url = isset( $_POST['api_url'] )
@@ -67,6 +68,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => __( 'API URL is required.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		update_option( 'waa_api_url', $api_url );
@@ -87,6 +89,7 @@ final class Settings {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$api_url = get_option( 'waa_api_url', '' );
@@ -95,6 +98,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => __( 'Please save an API URL first.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		$response = wp_remote_get(
@@ -107,6 +111,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => $response->get_error_message() )
 			);
+			return;
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -119,6 +124,7 @@ final class Settings {
 					'version' => $body['version'] ?? 'unknown',
 				)
 			);
+			return;
 		}
 
 		update_option( 'waa_connected', false );
@@ -141,6 +147,7 @@ final class Settings {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$api_url = get_option( 'waa_api_url', '' );
@@ -149,6 +156,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => __( 'Please save an API URL first.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		// Generate a cryptographically secure 64-character API key.
@@ -175,6 +183,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => $response->get_error_message() )
 			);
+			return;
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
@@ -183,9 +192,10 @@ final class Settings {
 		if ( 201 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
 			$error_msg = __( 'Connection failed.', 'woo-ai-analytics' );
 			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
-				$error_msg = $body['error']['message'];
+				$error_msg = sanitize_text_field( $body['error']['message'] );
 			}
 			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
 		}
 
 		// Encrypt and store the API key.
@@ -288,6 +298,7 @@ final class Settings {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$api_url    = get_option( 'waa_api_url', '' );
@@ -330,6 +341,7 @@ final class Settings {
 				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
 				403
 			);
+			return;
 		}
 
 		$api_url    = get_option( 'waa_api_url', '' );
@@ -339,6 +351,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
 			);
+			return;
 		}
 
 		$response = wp_remote_get(
@@ -355,6 +368,7 @@ final class Settings {
 			wp_send_json_error(
 				array( 'message' => $response->get_error_message() )
 			);
+			return;
 		}
 
 		$status_code = wp_remote_retrieve_response_code( $response );
@@ -366,6 +380,7 @@ final class Settings {
 				$error_msg = sanitize_text_field( $body['error']['message'] );
 			}
 			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
 		}
 
 		wp_send_json_success( $body['data'] );
