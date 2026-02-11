@@ -51,7 +51,8 @@ woo-ai-analytics/
 │   │   │   ├── sync/
 │   │   │   │   ├── orders.ts         # POST /api/sync/orders
 │   │   │   │   ├── products.ts       # POST /api/sync/products
-│   │   │   │   └── customers.ts      # POST /api/sync/customers
+│   │   │   │   ├── customers.ts      # POST /api/sync/customers
+│   │   │   │   └── categories.ts     # POST /api/sync/categories
 │   │   │   ├── chat/
 │   │   │   │   └── query.ts          # POST /api/chat/query
 │   │   │   └── dashboards/
@@ -62,7 +63,7 @@ woo-ai-analytics/
 │   │   │   └── rateLimit.ts          # Per-store rate limiting (planned)
 │   │   ├── services/
 │   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
-│   │   │   ├── syncService.ts        # Orders batch upsert (ON CONFLICT merge, sync logs)
+│   │   │   ├── syncService.ts        # Orders/Products/Customers/Categories batch upsert (ON CONFLICT merge, sync logs)
 │   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
 │   │   │   └── chartService.ts       # Chart rendering (planned)
 │   │   └── utils/
