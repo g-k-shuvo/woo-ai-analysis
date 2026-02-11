@@ -43,22 +43,14 @@ const BORDER_PALETTE = COLOR_PALETTE.map((c) => c.replace('0.7)', '1)'));
  * Generate an array of colors for `count` data points by cycling the palette.
  */
 export function generateColors(count: number): string[] {
-  const colors: string[] = [];
-  for (let i = 0; i < count; i++) {
-    colors.push(COLOR_PALETTE[i % COLOR_PALETTE.length]);
-  }
-  return colors;
+  return Array.from({ length: count }, (_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]);
 }
 
 /**
  * Generate border colors that match the fill palette but fully opaque.
  */
 export function generateBorderColors(count: number): string[] {
-  const colors: string[] = [];
-  for (let i = 0; i < count; i++) {
-    colors.push(BORDER_PALETTE[i % BORDER_PALETTE.length]);
-  }
-  return colors;
+  return Array.from({ length: count }, (_, i) => BORDER_PALETTE[i % BORDER_PALETTE.length]);
 }
 
 /**
@@ -163,19 +155,19 @@ function buildPieConfig(
   data: number[],
   count: number,
 ): ChartConfiguration {
+  const dataset: ChartConfiguration['data']['datasets'][0] = {
+    label: spec.title,
+    data,
+    backgroundColor: generateColors(count),
+    borderColor: generateBorderColors(count),
+    borderWidth: 1,
+  };
+
   return {
     type: spec.type as 'pie' | 'doughnut',
     data: {
       labels,
-      datasets: [
-        {
-          label: spec.title,
-          data,
-          backgroundColor: generateColors(count),
-          borderColor: generateBorderColors(count),
-          borderWidth: 1,
-        },
-      ],
+      datasets: [dataset],
     },
     options: {
       responsive: true,

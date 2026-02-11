@@ -159,7 +159,7 @@ type ChartSpecResult = ChartConfiguration | TableResult;
 ## 11. Checklist
 - [x] Plan reviewed
 - [x] Feature spec approved
-- [ ] Tests added/updated
+- [x] Tests added/updated
 - [ ] Lint/test/build pass
 - [ ] Docs updated (docs/ai/, agent_docs/)
 - [ ] PR raised
