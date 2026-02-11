@@ -30,7 +30,7 @@
 - [x] **3.7** Product queries — Top sellers, category performance
 - [x] **3.8** Customer queries — New vs returning, top spenders
 - [x] **3.9** Order queries — Count, AOV, status breakdown
-- [ ] **3.10** Chart spec generation — AI outputs chart type + config
+- [x] **3.10** Chart spec generation — AI outputs chart type + config
 
 ### Sprint 4: Chat UI & Charts (Week 9–10)
 - [ ] **4.1** Chat UI component — React message thread in WP admin
