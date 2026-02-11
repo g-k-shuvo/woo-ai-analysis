@@ -27,7 +27,7 @@ All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
 | POST | `/api/sync/categories` | Upsert categories batch |
 | POST | `/api/sync/coupons` | Upsert coupons batch |
 | POST | `/api/sync/webhook` | Incremental sync single entity. Body: `{ resource, action, data }` |
-| GET | `/api/sync/status` | Get sync health: last sync time, record counts, errors |
+| GET | `/api/sync/status` | Get sync health: lastSyncAt, recordCounts (orders/products/customers/categories), recentSyncs (last 10 sync_logs) |
 | POST | `/api/sync/full` | Trigger a full re-sync |
 
 ### Chat (AI Queries)
@@ -62,9 +62,11 @@ These run inside WordPress via `admin-ajax.php`:
 | Action | Description |
 |--------|-------------|
 | `woo_ai_chat_query` | Proxies chat request to SaaS backend (nonce required) |
-| `woo_ai_sync_status` | Returns current sync progress (nonce required) |
-| `woo_ai_connect` | Initiates store connection to SaaS |
-| `woo_ai_disconnect` | Disconnects store |
+| `waa_sync_status` | Proxies to GET /api/sync/status — returns record counts, last sync time, recent sync logs (nonce required) |
+| `waa_connect` | Initiates store connection to SaaS (nonce required) |
+| `waa_disconnect` | Disconnects store (nonce required) |
+| `waa_save_settings` | Saves API URL setting (nonce required) |
+| `waa_test_connection` | Tests connection to backend health endpoint (nonce required) |
 
 ## Response Format (Standard)
 

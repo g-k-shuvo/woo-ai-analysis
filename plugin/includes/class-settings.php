@@ -43,6 +43,7 @@ final class Settings {
 		add_action( 'wp_ajax_waa_test_connection', array( $this, 'handle_test_connection' ) );
 		add_action( 'wp_ajax_waa_connect', array( $this, 'handle_connect' ) );
 		add_action( 'wp_ajax_waa_disconnect', array( $this, 'handle_disconnect' ) );
+		add_action( 'wp_ajax_waa_sync_status', array( $this, 'handle_sync_status' ) );
 	}
 
 	/**
@@ -314,6 +315,59 @@ final class Settings {
 		wp_send_json_success(
 			array( 'message' => __( 'Disconnected.', 'woo-ai-analytics' ) )
 		);
+	}
+
+	/**
+	 * Sync status AJAX handler.
+	 *
+	 * Proxies to the SaaS backend GET /api/sync/status endpoint.
+	 */
+	public function handle_sync_status(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = self::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+		}
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/sync/status',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error(
+				array( 'message' => $response->get_error_message() )
+			);
+		}
+
+		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to fetch sync status.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+		}
+
+		wp_send_json_success( $body['data'] );
 	}
 
 	/**

@@ -1,5 +1,6 @@
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import SyncStatus from './SyncStatus';
 
 export default function Settings() {
   const { ajaxUrl, nonce, apiUrl: initialApiUrl, connected: initialConnected } =
@@ -203,6 +204,8 @@ export default function Settings() {
           <p>{status}</p>
         </div>
       )}
+
+      {connected && <SyncStatus />}
     </div>
   );
 }
