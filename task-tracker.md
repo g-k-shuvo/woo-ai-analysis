@@ -24,7 +24,7 @@
 - [x] **3.1** AI system prompt — Schema injection + few-shot examples
 - [x] **3.2** NL→SQL pipeline — Question → OpenAI → SQL → validation
 - [x] **3.3** SQL validator — SELECT-only check, store_id check, timeout
-- [ ] **3.4** Read-only DB user — PostgreSQL user with SELECT-only permissions
+- [x] **3.4** Read-only DB user — PostgreSQL user with SELECT-only permissions
 - [ ] **3.5** Query execution — Run validated SQL, return results
 - [ ] **3.6** Revenue queries — Total, by period, comparisons
 - [ ] **3.7** Product queries — Top sellers, category performance
