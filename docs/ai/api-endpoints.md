@@ -28,6 +28,8 @@ All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
 | POST | `/api/sync/coupons` | Upsert coupons batch |
 | POST | `/api/sync/webhook` | Incremental sync single entity. Body: `{ resource, action, data }` |
 | GET | `/api/sync/status` | Get sync health: lastSyncAt, recordCounts (orders/products/customers/categories), recentSyncs (last 10 sync_logs) |
+| GET | `/api/sync/errors` | List failed/retryable syncs (retry_count < 5) for the authenticated store |
+| POST | `/api/sync/retry/:syncLogId` | Schedule retry for a specific failed sync log entry |
 | POST | `/api/sync/full` | Trigger a full re-sync |
 
 ### Chat (AI Queries)

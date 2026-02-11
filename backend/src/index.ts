@@ -15,6 +15,8 @@ import { syncCustomersRoutes } from './routes/sync/customers.js';
 import { syncCategoriesRoutes } from './routes/sync/categories.js';
 import { syncWebhookRoutes } from './routes/sync/webhook.js';
 import { syncStatusRoutes } from './routes/sync/status.js';
+import { syncErrorsRoutes } from './routes/sync/errors.js';
+import { createSyncRetryService } from './services/syncRetryService.js';
 
 const startTime = Date.now();
 
@@ -61,6 +63,7 @@ registerAuthMiddleware(fastify, { db });
 // Services
 const storeService = createStoreService({ db });
 const syncService = createSyncService({ db });
+const syncRetryService = createSyncRetryService({ db });
 
 // Routes
 await fastify.register(
@@ -93,6 +96,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => syncStatusRoutes(instance, { syncService }),
+);
+
+await fastify.register(
+  async (instance) => syncErrorsRoutes(instance, { syncRetryService }),
 );
 
 // Graceful shutdown

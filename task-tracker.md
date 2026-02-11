@@ -18,7 +18,7 @@
 - [x] **2.4** Initial full sync — Products + Customers + Categories
 - [x] **2.5** Incremental sync — WooCommerce webhook registration + handlers
 - [x] **2.6** Sync status API — Progress tracking + WP admin progress bar
-- [ ] **2.7** Sync error handling — Retry logic, error logging, fallback cron
+- [x] **2.7** Sync error handling — Retry logic, error logging, fallback cron
 
 ### Sprint 3: AI Core (Week 5–8)
 - [ ] **3.1** AI system prompt — Schema injection + few-shot examples

@@ -53,7 +53,8 @@ woo-ai-analytics/
 │   │   │   │   ├── products.ts       # POST /api/sync/products
 │   │   │   │   ├── customers.ts      # POST /api/sync/customers
 │   │   │   │   ├── categories.ts     # POST /api/sync/categories
-│   │   │   │   └── webhook.ts        # POST /api/sync/webhook (incremental sync)
+│   │   │   │   ├── webhook.ts        # POST /api/sync/webhook (incremental sync)
+│   │   │   │   └── errors.ts         # GET /api/sync/errors, POST /api/sync/retry/:syncLogId
 │   │   │   ├── chat/
 │   │   │   │   └── query.ts          # POST /api/chat/query
 │   │   │   └── dashboards/
@@ -65,6 +66,7 @@ woo-ai-analytics/
 │   │   ├── services/
 │   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
 │   │   │   ├── syncService.ts        # Orders/Products/Customers/Categories batch upsert (ON CONFLICT merge, sync logs)
+│   │   │   ├── syncRetryService.ts   # Retry logic, exponential backoff, stale sync detection
 │   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
 │   │   │   └── chartService.ts       # Chart rendering (planned)
 │   │   └── utils/
