@@ -43,6 +43,27 @@ const examples: readonly FewShotExample[] = [
     explanation:
       'Calculates the average total across all completed/processing orders.',
   },
+  {
+    category: 'revenue',
+    question: 'Compare this month revenue to last month',
+    sql: `SELECT 'current' AS period, COALESCE(ROUND(SUM(total), 2), 0) AS revenue, COUNT(*) AS order_count FROM orders WHERE store_id = $1 AND status IN ('completed', 'processing') AND date_created >= DATE_TRUNC('month', NOW()) AND date_created < NOW() LIMIT 1`,
+    explanation:
+      'Gets current month revenue. A second query with previous month boundaries provides the comparison.',
+  },
+  {
+    category: 'revenue',
+    question: 'Show me monthly revenue for the last 6 months',
+    sql: `SELECT DATE_TRUNC('month', date_created) AS month, ROUND(SUM(total), 2) AS monthly_revenue, COUNT(*) AS order_count FROM orders WHERE store_id = $1 AND status IN ('completed', 'processing') AND date_created >= NOW() - INTERVAL '6 months' GROUP BY DATE_TRUNC('month', date_created) ORDER BY month ASC LIMIT 6`,
+    explanation:
+      'Groups revenue by month for the last 6 months, ordered chronologically.',
+  },
+  {
+    category: 'revenue',
+    question: 'What was my revenue this week?',
+    sql: `SELECT COALESCE(ROUND(SUM(total), 2), 0) AS weekly_revenue, COUNT(*) AS order_count FROM orders WHERE store_id = $1 AND status IN ('completed', 'processing') AND date_created >= DATE_TRUNC('week', NOW()) LIMIT 1`,
+    explanation:
+      'Sums revenue from the start of the current week (Monday) to now.',
+  },
 
   // ── Product ───────────────────────────────────────────────
   {

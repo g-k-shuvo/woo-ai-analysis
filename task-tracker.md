@@ -26,7 +26,7 @@
 - [x] **3.3** SQL validator — SELECT-only check, store_id check, timeout
 - [x] **3.4** Read-only DB user — PostgreSQL user with SELECT-only permissions
 - [x] **3.5** Query execution — Run validated SQL, return results
-- [ ] **3.6** Revenue queries — Total, by period, comparisons
+- [x] **3.6** Revenue queries — Total, by period, comparisons
 - [ ] **3.7** Product queries — Top sellers, category performance
 - [ ] **3.8** Customer queries — New vs returning, top spenders
 - [ ] **3.9** Order queries — Count, AOV, status breakdown
