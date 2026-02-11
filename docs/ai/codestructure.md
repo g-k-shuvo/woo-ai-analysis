@@ -27,8 +27,8 @@ woo-ai-analytics/
 │   │   ├── src/
 │   │   │   ├── App.jsx                # Root component
 │   │   │   ├── components/
-│   │   │   │   ├── ChatWindow.jsx     # Chat message thread
-│   │   │   │   ├── ChatInput.jsx      # Message input + send
+│   │   │   │   ├── ChatWindow.jsx     # Chat message thread [implemented]
+│   │   │   │   ├── ChatInput.jsx      # Message input + send + suggested questions [implemented]
 │   │   │   │   ├── ChartDisplay.jsx   # Chart.js chart rendering
 │   │   │   │   ├── Dashboard.jsx      # Saved charts grid
 │   │   │   │   ├── Settings.jsx       # Connection settings page

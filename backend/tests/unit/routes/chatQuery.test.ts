@@ -1,7 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import type { ChatResponse } from '../../../src/services/chatService.js';
+import type { ChatResponse, SuggestionsResponse } from '../../../src/services/chatService.js';
 
 // ── Mock logger before importing the module under test ──────────────
 
@@ -34,6 +34,7 @@ function makeResponse(overrides: Partial<ChatResponse> = {}): ChatResponse {
 
 interface MockChatService {
   ask: jest.Mock<(storeId: string, question: string) => Promise<ChatResponse>>;
+  getSuggestions: jest.Mock<() => SuggestionsResponse>;
 }
 
 async function buildApp(mockChatService: MockChatService): Promise<FastifyInstance> {
@@ -72,6 +73,7 @@ describe('POST /api/chat/query', () => {
     jest.clearAllMocks();
     mockChatService = {
       ask: jest.fn<(storeId: string, question: string) => Promise<ChatResponse>>(),
+      getSuggestions: jest.fn<() => SuggestionsResponse>(),
     };
     app = await buildApp(mockChatService);
   });
@@ -308,6 +310,141 @@ describe('POST /api/chat/query', () => {
       const response = await app.inject({
         method: 'DELETE',
         url: '/api/chat/query',
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+  });
+});
+
+// ── GET /api/chat/suggestions tests ──────────────────────────────
+
+describe('GET /api/chat/suggestions', () => {
+  let app: FastifyInstance;
+  let mockChatService: MockChatService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    mockChatService = {
+      ask: jest.fn<(storeId: string, question: string) => Promise<ChatResponse>>(),
+      getSuggestions: jest.fn<() => SuggestionsResponse>(),
+    };
+    app = await buildApp(mockChatService);
+  });
+
+  // ── Successful response ──────────────────────────────────────
+
+  describe('successful response', () => {
+    it('returns 200 with success true', async () => {
+      mockChatService.getSuggestions.mockReturnValue({
+        suggestions: ['What was my total revenue?'],
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const body = JSON.parse(response.body);
+      expect(body.success).toBe(true);
+    });
+
+    it('returns suggestions array from chatService', async () => {
+      const suggestionsData: SuggestionsResponse = {
+        suggestions: [
+          'What was my total revenue this month?',
+          'What are my top 5 selling products?',
+          'How many new customers this week?',
+        ],
+      };
+      mockChatService.getSuggestions.mockReturnValue(suggestionsData);
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(body.data.suggestions).toEqual(suggestionsData.suggestions);
+    });
+
+    it('calls chatService.getSuggestions', async () => {
+      mockChatService.getSuggestions.mockReturnValue({ suggestions: [] });
+
+      await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      expect(mockChatService.getSuggestions).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns data.suggestions as an array', async () => {
+      mockChatService.getSuggestions.mockReturnValue({
+        suggestions: ['Revenue?', 'Products?'],
+      });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(Array.isArray(body.data.suggestions)).toBe(true);
+    });
+
+    it('returns empty suggestions array when getSuggestions returns empty', async () => {
+      mockChatService.getSuggestions.mockReturnValue({ suggestions: [] });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      const body = JSON.parse(response.body);
+      expect(body.data.suggestions).toEqual([]);
+    });
+  });
+
+  // ── Route configuration ──────────────────────────────────────
+
+  describe('route configuration', () => {
+    it('responds to GET method', async () => {
+      mockChatService.getSuggestions.mockReturnValue({ suggestions: [] });
+
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/chat/suggestions',
+      });
+
+      expect(response.statusCode).toBe(200);
+    });
+
+    it('returns 404 for POST method on /api/chat/suggestions', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/chat/suggestions',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 404 for PUT method on /api/chat/suggestions', async () => {
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/chat/suggestions',
+        payload: {},
+      });
+
+      expect(response.statusCode).toBe(404);
+    });
+
+    it('returns 404 for DELETE method on /api/chat/suggestions', async () => {
+      const response = await app.inject({
+        method: 'DELETE',
+        url: '/api/chat/suggestions',
       });
 
       expect(response.statusCode).toBe(404);

@@ -63,7 +63,8 @@ These run inside WordPress via `admin-ajax.php`:
 
 | Action | Description |
 |--------|-------------|
-| `woo_ai_chat_query` | Proxies chat request to SaaS backend (nonce required) |
+| `waa_chat_query` | Proxies chat request to SaaS backend POST /api/chat/query (nonce required) [implemented] |
+| `waa_chat_suggestions` | Proxies to GET /api/chat/suggestions — returns suggested questions (nonce required) [implemented] |
 | `waa_sync_status` | Proxies to GET /api/sync/status — returns record counts, last sync time, recent sync logs (nonce required) |
 | `waa_connect` | Initiates store connection to SaaS (nonce required) |
 | `waa_disconnect` | Disconnects store (nonce required) |

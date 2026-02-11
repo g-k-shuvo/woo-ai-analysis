@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from '@wordpress/element';
+import { useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import useChat from '../hooks/useChat';
+import ChatInput from './ChatInput';
 import './ChatWindow.css';
 
 const { connected } = window.waaData || {};
 
 export default function ChatWindow() {
 	const { messages, loading, sendMessage, clearMessages } = useChat();
-	const [ inputValue, setInputValue ] = useState( '' );
 	const messagesEndRef = useRef( null );
 
 	// Auto-scroll to bottom when new messages arrive
@@ -31,22 +31,6 @@ export default function ChatWindow() {
 		);
 	}
 
-	const handleSubmit = ( e ) => {
-		e.preventDefault();
-		if ( ! inputValue.trim() || loading ) {
-			return;
-		}
-		sendMessage( inputValue );
-		setInputValue( '' );
-	};
-
-	const handleKeyDown = ( e ) => {
-		if ( e.key === 'Enter' && ! e.shiftKey ) {
-			e.preventDefault();
-			handleSubmit( e );
-		}
-	};
-
 	const formatTime = ( timestamp ) => {
 		const date = new Date( timestamp );
 		return date.toLocaleTimeString( [], {
@@ -59,9 +43,7 @@ export default function ChatWindow() {
 		<div className="wrap">
 			<div className="waa-chat">
 				<div className="waa-chat__header">
-					<h1>
-						{ __( 'AI Analytics', 'woo-ai-analytics' ) }
-					</h1>
+					<h1>{ __( 'AI Analytics', 'woo-ai-analytics' ) }</h1>
 					{ messages.length > 0 && (
 						<button
 							type="button"
@@ -79,12 +61,6 @@ export default function ChatWindow() {
 							<p>
 								{ __(
 									'Ask a question about your WooCommerce data.',
-									'woo-ai-analytics'
-								) }
-							</p>
-							<p className="waa-chat__empty-hint">
-								{ __(
-									'Try: "What was my total revenue this month?" or "What are my top 5 selling products?"',
 									'woo-ai-analytics'
 								) }
 							</p>
@@ -130,29 +106,11 @@ export default function ChatWindow() {
 					<div ref={ messagesEndRef } />
 				</div>
 
-				<form className="waa-chat__input-form" onSubmit={ handleSubmit }>
-					<textarea
-						className="waa-chat__input"
-						value={ inputValue }
-						onChange={ ( e ) => setInputValue( e.target.value ) }
-						onKeyDown={ handleKeyDown }
-						placeholder={ __(
-							'Ask a question about your store data…',
-							'woo-ai-analytics'
-						) }
-						disabled={ loading }
-						rows={ 1 }
-					/>
-					<button
-						type="submit"
-						className="button button-primary waa-chat__send"
-						disabled={ loading || ! inputValue.trim() }
-					>
-						{ loading
-							? __( 'Thinking…', 'woo-ai-analytics' )
-							: __( 'Send', 'woo-ai-analytics' ) }
-					</button>
-				</form>
+				<ChatInput
+					onSend={ sendMessage }
+					loading={ loading }
+					showSuggestions={ messages.length === 0 && ! loading }
+				/>
 			</div>
 		</div>
 	);

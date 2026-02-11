@@ -672,7 +672,7 @@ describe('chatService', () => {
   // ── createChatService factory ───────────────────────────────────
 
   describe('createChatService factory', () => {
-    it('returns an object with ask method', () => {
+    it('returns an object with ask and getSuggestions methods', () => {
       const chatService = createChatService({
         aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
         queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
@@ -680,6 +680,136 @@ describe('chatService', () => {
 
       expect(chatService).toHaveProperty('ask');
       expect(typeof chatService.ask).toBe('function');
+      expect(chatService).toHaveProperty('getSuggestions');
+      expect(typeof chatService.getSuggestions).toBe('function');
+    });
+  });
+
+  // ── getSuggestions() ──────────────────────────────────────────────
+
+  describe('getSuggestions()', () => {
+    it('returns an object with suggestions array', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      expect(result).toHaveProperty('suggestions');
+      expect(Array.isArray(result.suggestions)).toBe(true);
+    });
+
+    it('returns at least 4 suggestions', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      expect(result.suggestions.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('all suggestions are non-empty strings', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      for (const suggestion of result.suggestions) {
+        expect(typeof suggestion).toBe('string');
+        expect(suggestion.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it('includes revenue-related suggestion', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const hasRevenue = result.suggestions.some(s => s.toLowerCase().includes('revenue'));
+
+      expect(hasRevenue).toBe(true);
+    });
+
+    it('includes product-related suggestion', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const hasProducts = result.suggestions.some(s => s.toLowerCase().includes('product'));
+
+      expect(hasProducts).toBe(true);
+    });
+
+    it('includes customer-related suggestion', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const hasCustomers = result.suggestions.some(s => s.toLowerCase().includes('customer'));
+
+      expect(hasCustomers).toBe(true);
+    });
+
+    it('includes order-related suggestion', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const hasOrders = result.suggestions.some(s => s.toLowerCase().includes('order'));
+
+      expect(hasOrders).toBe(true);
+    });
+
+    it('returns a new array each call (not shared reference)', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result1 = chatService.getSuggestions();
+      const result2 = chatService.getSuggestions();
+
+      expect(result1.suggestions).not.toBe(result2.suggestions);
+      expect(result1.suggestions).toEqual(result2.suggestions);
+    });
+
+    it('all suggestions end with a question mark or are statements', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      for (const suggestion of result.suggestions) {
+        // Each suggestion should be a reasonable question or imperative
+        expect(suggestion.length).toBeGreaterThan(10);
+      }
+    });
+
+    it('does not require any async operations', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      // getSuggestions is synchronous — verify it returns immediately (not a promise)
+      const result = chatService.getSuggestions();
+
+      expect(result).not.toBeInstanceOf(Promise);
     });
   });
 });

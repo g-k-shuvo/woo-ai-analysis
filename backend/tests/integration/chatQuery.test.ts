@@ -644,3 +644,112 @@ describe('Chat query integration — full pipeline chain', () => {
     });
   });
 });
+
+// ── Chat suggestions integration tests ─────────────────────────────
+
+describe('Chat suggestions integration', () => {
+  let mockPipeline: MockPipeline;
+  let mockExecutor: MockExecutor;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    const deps = createMockDeps();
+    mockPipeline = deps.mockPipeline;
+    mockExecutor = deps.mockExecutor;
+  });
+
+  describe('getSuggestions()', () => {
+    it('returns suggestions covering all major query categories', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const allSuggestions = result.suggestions.join(' ').toLowerCase();
+
+      expect(allSuggestions).toContain('revenue');
+      expect(allSuggestions).toContain('product');
+      expect(allSuggestions).toContain('customer');
+      expect(allSuggestions).toContain('order');
+    });
+
+    it('returns suggestions that are valid questions', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      for (const suggestion of result.suggestions) {
+        expect(typeof suggestion).toBe('string');
+        expect(suggestion.length).toBeGreaterThan(10);
+        expect(suggestion.length).toBeLessThan(200);
+      }
+    });
+
+    it('returns consistent suggestions across multiple calls', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result1 = chatService.getSuggestions();
+      const result2 = chatService.getSuggestions();
+
+      expect(result1.suggestions).toEqual(result2.suggestions);
+    });
+
+    it('does not require pipeline or executor to be called', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      chatService.getSuggestions();
+
+      expect(mockPipeline.processQuestion).not.toHaveBeenCalled();
+      expect(mockExecutor.execute).not.toHaveBeenCalled();
+    });
+
+    it('returns suggestions that could be used as ask() input', async () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const { suggestions } = chatService.getSuggestions();
+
+      // Each suggestion should be a non-empty string that could be passed to ask()
+      for (const suggestion of suggestions) {
+        expect(suggestion.trim()).toBe(suggestion);
+        expect(suggestion.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it('returns between 4 and 10 suggestions', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+
+      expect(result.suggestions.length).toBeGreaterThanOrEqual(4);
+      expect(result.suggestions.length).toBeLessThanOrEqual(10);
+    });
+
+    it('returns no duplicate suggestions', () => {
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = chatService.getSuggestions();
+      const uniqueSuggestions = new Set(result.suggestions);
+
+      expect(uniqueSuggestions.size).toBe(result.suggestions.length);
+    });
+  });
+});
