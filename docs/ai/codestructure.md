@@ -85,7 +85,9 @@ woo-ai-analytics/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
 │   │   └── specs/                    # Default chart configurations
 │   ├── db/
+│   │   ├── readonlyConnection.ts     # Read-only Knex pool for AI queries (SELECT-only, 5s timeout) [implemented]
 │   │   ├── knexfile.ts               # Knex configuration
+│   │   ├── init-readonly-user.sql    # PostgreSQL read-only user creation script [implemented]
 │   │   ├── migrations/               # Database migrations
 │   │   └── seeds/                    # Test data seeds
 │   ├── tests/
@@ -97,9 +99,12 @@ woo-ai-analytics/
 │   │   │   │   ├── schemaContext.test.ts   # Schema context service tests [implemented]
 │   │   │   │   ├── sqlValidator.test.ts    # SQL validator tests [implemented]
 │   │   │   │   └── pipeline.test.ts        # NL→SQL pipeline tests [implemented]
+│   │   │   ├── db/
+│   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
 │   │   │   ├── aiPipeline.test.ts          # AI pipeline integration tests [implemented]
+│   │   │   ├── readonlyDb.test.ts          # Read-only DB enforcement tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev

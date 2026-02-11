@@ -38,6 +38,7 @@ Store Owner → WP Admin Chat UI → Plugin AJAX → SaaS Backend API
 - **Chart Engine** (`charts/`): Server-side chart rendering via Chart.js + chartjs-node-canvas
 - **Job Queue** (BullMQ): Background jobs for data sync, report generation, scheduled insights
 - **Database** (PostgreSQL): Analytics-optimized store of synced WooCommerce data
+- **Read-only DB** (`src/db/readonlyConnection.ts`): Separate Knex pool using `woo_ai_readonly` PostgreSQL user for AI query execution (SELECT-only, 5s timeout)
 
 ### AI Pipeline (`backend/ai/`)
 - **System Prompt**: Injects store's data schema (tables, columns, date ranges)

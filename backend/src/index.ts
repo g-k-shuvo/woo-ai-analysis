@@ -17,6 +17,7 @@ import { syncWebhookRoutes } from './routes/sync/webhook.js';
 import { syncStatusRoutes } from './routes/sync/status.js';
 import { syncErrorsRoutes } from './routes/sync/errors.js';
 import { createSyncRetryService } from './services/syncRetryService.js';
+import { createReadonlyDb } from './db/readonlyConnection.js';
 
 const startTime = Date.now();
 
@@ -32,6 +33,9 @@ const db = knex({
   connection: config.database.url,
   pool: { min: 2, max: 10 },
 });
+
+// Read-only database (for AI-generated queries)
+const readonlyDb = createReadonlyDb(config.database.readonlyUrl);
 
 // Redis
 const redis = new IORedis(config.redis.url, {
@@ -107,6 +111,7 @@ async function shutdown(signal: string) {
   logger.info({ signal }, 'Shutting down gracefully...');
   await fastify.close();
   await db.destroy();
+  await readonlyDb.destroy();
   redis.disconnect();
   logger.info('Server shut down');
   process.exit(0);
@@ -124,4 +129,4 @@ try {
   process.exit(1);
 }
 
-export { fastify, db, redis };
+export { fastify, db, readonlyDb, redis };
