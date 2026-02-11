@@ -335,16 +335,22 @@ final class Webhooks {
 	/**
 	 * Transform a WC_Customer into the backend sync payload format.
 	 *
-	 * Note: Email is sent for server-side hashing. The backend stores only
-	 * the SHA256 hash — never the raw email.
+	 * Email is hashed client-side (SHA-256) before sending to the backend
+	 * to minimize PII in transit. The backend expects the `email` field
+	 * and hashes it again, but receiving a pre-hashed value is safe.
 	 *
 	 * @param \WC_Customer $customer The WooCommerce customer.
 	 * @return array<string, mixed> Payload matching POST /api/sync/customers schema.
 	 */
 	private function transform_customer( \WC_Customer $customer ): array {
+		$email      = $customer->get_email();
+		$email_hash = ! empty( $email )
+			? hash( 'sha256', strtolower( trim( $email ) ) )
+			: null;
+
 		return array(
 			'wc_customer_id'  => $customer->get_id(),
-			'email'           => $customer->get_email(),
+			'email_hash'      => $email_hash,
 			'display_name'    => $customer->get_display_name(),
 			'total_spent'     => (float) $customer->get_total_spent(),
 			'order_count'     => $customer->get_order_count(),

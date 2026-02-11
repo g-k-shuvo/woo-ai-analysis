@@ -1,17 +1,19 @@
 import { jest, describe, it, expect, afterEach } from '@jest/globals';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
-import { syncWebhookRoutes } from '../../src/routes/sync/webhook.js';
-import { registerErrorHandler } from '../../src/middleware/errorHandler.js';
 
-// Mock logger
-jest.mock('../../src/utils/logger.js', () => ({
+// ESM-compatible mocks — must be set up BEFORE dynamic import
+jest.unstable_mockModule('../../src/utils/logger.js', () => ({
   logger: {
     info: jest.fn(),
     warn: jest.fn(),
     error: jest.fn(),
   },
 }));
+
+// Dynamic imports AFTER mocks are set up
+const { syncWebhookRoutes } = await import('../../src/routes/sync/webhook.js');
+const { registerErrorHandler } = await import('../../src/middleware/errorHandler.js');
 
 function createMockSyncService() {
   return {
@@ -72,7 +74,7 @@ function makeProductData(overrides: Record<string, unknown> = {}) {
 function makeCustomerData(overrides: Record<string, unknown> = {}) {
   return {
     wc_customer_id: 42,
-    email: 'test@example.com',
+    email_hash: 'abc123hash',
     display_name: 'Test User',
     total_spent: 199.99,
     order_count: 5,

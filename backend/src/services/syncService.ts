@@ -49,6 +49,7 @@ export interface ProductPayload {
 export interface CustomerPayload {
   wc_customer_id: number;
   email?: string;
+  email_hash?: string;
   display_name?: string;
   total_spent?: number;
   order_count?: number;
@@ -455,7 +456,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const trx = await db.transaction();
     try {
       for (const customer of validCustomers) {
-        const emailHash = customer.email ? hashEmail(customer.email) : null;
+        const emailHash = customer.email_hash ?? (customer.email ? hashEmail(customer.email) : null);
 
         await trx('customers')
           .insert({
