@@ -77,8 +77,9 @@ woo-ai-analytics/
 │   │       │   ├── system.ts         # System prompt builder (schema + metadata + rules + few-shot) [implemented]
 │   │       │   └── examples.ts       # 13 few-shot NL→SQL examples across 4 categories [implemented]
 │   │       ├── schemaContext.ts       # Store metadata fetcher (counts, dates, currency) [implemented]
-│   │       ├── pipeline.ts           # Main NL→SQL→Result pipeline (planned)
-│   │       ├── validator.ts          # SQL validation (SELECT-only, store_id) (planned)
+│   │       ├── types.ts              # Shared AI pipeline types (ChartSpec, AIQueryResult, etc.) [implemented]
+│   │       ├── pipeline.ts           # Main NL→SQL→Result pipeline (OpenAI integration) [implemented]
+│   │       ├── sqlValidator.ts       # SQL validation (SELECT-only, store_id, LIMIT, injection prevention) [implemented]
 │   │       └── chartSpec.ts          # AI → Chart.js config converter (planned)
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
@@ -93,9 +94,13 @@ woo-ai-analytics/
 │   │   │   ├── ai/
 │   │   │   │   ├── systemPrompt.test.ts   # System prompt builder tests [implemented]
 │   │   │   │   ├── examples.test.ts       # Few-shot examples tests [implemented]
-│   │   │   │   └── schemaContext.test.ts   # Schema context service tests [implemented]
+│   │   │   │   ├── schemaContext.test.ts   # Schema context service tests [implemented]
+│   │   │   │   ├── sqlValidator.test.ts    # SQL validator tests [implemented]
+│   │   │   │   └── pipeline.test.ts        # NL→SQL pipeline tests [implemented]
 │   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
+│   │   │   ├── aiPipeline.test.ts          # AI pipeline integration tests [implemented]
+│   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev
 │   ├── package.json
