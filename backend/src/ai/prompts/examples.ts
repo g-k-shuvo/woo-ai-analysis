@@ -137,6 +137,34 @@ const examples: readonly FewShotExample[] = [
     explanation:
       'Counts customers whose first_order_date is in the current month.',
   },
+  {
+    category: 'customer',
+    question: 'Who are my most frequent buyers?',
+    sql: `SELECT display_name, order_count, ROUND(total_spent, 2) AS total_spent FROM customers WHERE store_id = $1 AND order_count > 0 ORDER BY order_count DESC LIMIT 10`,
+    explanation:
+      'Lists customers ordered by order_count descending. Uses display_name to avoid PII.',
+  },
+  {
+    category: 'customer',
+    question: 'What is my average customer lifetime value?',
+    sql: `SELECT ROUND(AVG(total_spent), 2) AS avg_lifetime_value, ROUND(AVG(order_count), 2) AS avg_orders, COUNT(*) AS total_customers FROM customers WHERE store_id = $1 AND order_count > 0 LIMIT 1`,
+    explanation:
+      'Calculates average total_spent and order_count across all customers with at least one order.',
+  },
+  {
+    category: 'customer',
+    question: 'How many new customers did I get last week?',
+    sql: `SELECT COUNT(*) AS new_customers FROM customers WHERE store_id = $1 AND first_order_date >= DATE_TRUNC('week', NOW()) - INTERVAL '1 week' AND first_order_date < DATE_TRUNC('week', NOW()) LIMIT 1`,
+    explanation:
+      'Counts customers whose first_order_date was in the previous calendar week.',
+  },
+  {
+    category: 'customer',
+    question: 'How many total customers do I have?',
+    sql: `SELECT COUNT(*) AS total_customers FROM customers WHERE store_id = $1 AND order_count > 0 LIMIT 1`,
+    explanation:
+      'Counts all customers with at least one order for this store.',
+  },
 
   // ── Order ─────────────────────────────────────────────────
   {
