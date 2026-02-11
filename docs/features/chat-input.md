@@ -93,9 +93,9 @@ Response (success):
 ### New files/modules
 - `plugin/admin/src/components/ChatInput.jsx` — extracted input component
 - `plugin/admin/src/components/ChatInput.css` — input + suggestions styles
-- `backend/tests/unit/services/chatSuggestions.test.ts` — unit tests
-- `backend/tests/unit/routes/chatSuggestions.test.ts` — route unit tests
-- `backend/tests/integration/chatSuggestions.test.ts` — integration tests
+- `backend/tests/unit/services/chatService.test.ts` — unit tests for `getSuggestions` (added to existing file)
+- `backend/tests/unit/routes/chatQuery.test.ts` — unit tests for `GET /api/chat/suggestions` route (added to existing file)
+- `backend/tests/integration/chatQuery.test.ts` — integration tests for `getSuggestions` (added to existing file)
 
 ## 9. Test Plan
 

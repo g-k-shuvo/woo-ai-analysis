@@ -166,13 +166,21 @@ final class Ajax_Handler {
 		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Failed to fetch suggestions.', 'woo-ai-analytics' ) )
-			);
+			$error_msg = __( 'Failed to fetch suggestions.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
 			return;
 		}
 
-		wp_send_json_success( $body['data'] );
+		$suggestions = array();
+		if ( is_array( $body['data']['suggestions'] ?? null ) ) {
+			foreach ( $body['data']['suggestions'] as $suggestion ) {
+				$suggestions[] = sanitize_text_field( $suggestion );
+			}
+		}
+		wp_send_json_success( array( 'suggestions' => $suggestions ) );
 	}
 
 	/**

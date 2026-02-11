@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import PropTypes from 'prop-types';
 import './ChatInput.css';
 
 const { ajaxUrl, nonce } = window.waaData || {};
@@ -18,12 +19,18 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 	const [ suggestions, setSuggestions ] = useState( FALLBACK_SUGGESTIONS );
 	const textareaRef = useRef( null );
 
+	// Auto-focus textarea on mount
+	useEffect( () => {
+		textareaRef.current?.focus();
+	}, [] );
+
 	// Fetch suggestions from backend on mount
 	useEffect( () => {
 		if ( ! ajaxUrl || ! nonce ) {
 			return;
 		}
 
+		const controller = new AbortController();
 		const formData = new FormData();
 		formData.append( 'action', 'waa_chat_suggestions' );
 		formData.append( 'nonce', nonce );
@@ -31,6 +38,7 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 		fetch( ajaxUrl, {
 			method: 'POST',
 			body: formData,
+			signal: controller.signal,
 		} )
 			.then( ( response ) => response.json() )
 			.then( ( result ) => {
@@ -39,8 +47,10 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 				}
 			} )
 			.catch( () => {
-				// Keep fallback suggestions on error
+				// Keep fallback suggestions on error or abort
 			} );
+
+		return () => controller.abort();
 	}, [] );
 
 	const handleSubmit = ( e ) => {
@@ -69,7 +79,14 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 	return (
 		<div className="waa-chat-input">
 			{ showSuggestions && suggestions.length > 0 && (
-				<div className="waa-chat-input__suggestions">
+				<div
+					className="waa-chat-input__suggestions"
+					role="group"
+					aria-label={ __(
+						'Suggested questions',
+						'woo-ai-analytics'
+					) }
+				>
 					<p className="waa-chat-input__suggestions-label">
 						{ __( 'Suggested questions:', 'woo-ai-analytics' ) }
 					</p>
@@ -95,6 +112,10 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 				<textarea
 					ref={ textareaRef }
 					className="waa-chat-input__textarea"
+					aria-label={ __(
+						'Ask a question about your store data',
+						'woo-ai-analytics'
+					) }
 					value={ inputValue }
 					onChange={ ( e ) => setInputValue( e.target.value ) }
 					onKeyDown={ handleKeyDown }
@@ -118,3 +139,9 @@ export default function ChatInput( { onSend, loading, showSuggestions } ) {
 		</div>
 	);
 }
+
+ChatInput.propTypes = {
+	onSend: PropTypes.func.isRequired,
+	loading: PropTypes.bool.isRequired,
+	showSuggestions: PropTypes.bool.isRequired,
+};
