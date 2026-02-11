@@ -48,6 +48,27 @@ function validateOrder(order: unknown): order is OrderPayload {
   return true;
 }
 
+async function fetchIdsToMap(
+  trx: Knex.Transaction,
+  table: string,
+  storeId: string,
+  wcIdColumn: string,
+  wcIds: number[],
+): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  if (wcIds.length === 0) return map;
+
+  const rows = await trx(table)
+    .select('id', wcIdColumn)
+    .where({ store_id: storeId })
+    .whereIn(wcIdColumn, wcIds);
+
+  for (const row of rows) {
+    map.set(row[wcIdColumn], row.id);
+  }
+  return map;
+}
+
 export function createSyncService(deps: SyncServiceDeps) {
   const { db } = deps;
 
@@ -78,30 +99,50 @@ export function createSyncService(deps: SyncServiceDeps) {
       return { syncedCount: 0, skippedCount: 0, syncLogId };
     }
 
-    let syncedCount = 0;
+    // Separate valid orders from invalid ones
+    const validOrders: OrderPayload[] = [];
     let skippedCount = 0;
+
+    for (const rawOrder of orders) {
+      if (!validateOrder(rawOrder)) {
+        skippedCount++;
+        logger.warn({ storeId, order: rawOrder }, 'Skipping invalid order: missing required fields');
+        continue;
+      }
+      validOrders.push(rawOrder);
+    }
+
+    if (validOrders.length === 0) {
+      await db('sync_logs').where({ id: syncLogId, store_id: storeId }).update({
+        status: 'completed',
+        records_synced: 0,
+        completed_at: db.fn.now(),
+      });
+
+      return { syncedCount: 0, skippedCount, syncLogId };
+    }
+
+    let syncedCount = 0;
 
     const trx = await db.transaction();
     try {
-      for (const rawOrder of orders) {
-        if (!validateOrder(rawOrder)) {
-          skippedCount++;
-          logger.warn({ storeId, order: rawOrder }, 'Skipping invalid order: missing required fields');
-          continue;
-        }
+      // Batch-fetch customer and product UUIDs to avoid N+1 queries
+      const customerWcIds = validOrders
+        .map((o) => o.customer_id)
+        .filter((id): id is number => !!id && id > 0);
+      const productWcIds = validOrders
+        .flatMap((o) => o.items ?? [])
+        .map((item) => item.wc_product_id)
+        .filter((id): id is number => !!id);
+      const uniqueProductWcIds = [...new Set(productWcIds)];
 
-        const order = rawOrder;
+      const customerMap = await fetchIdsToMap(trx, 'customers', storeId, 'wc_customer_id', [...new Set(customerWcIds)]);
+      const productMap = await fetchIdsToMap(trx, 'products', storeId, 'wc_product_id', uniqueProductWcIds);
 
-        // Resolve customer UUID from wc_customer_id if provided
-        let customerUuid: string | null = null;
-        if (order.customer_id && order.customer_id > 0) {
-          const customer = await trx('customers')
-            .where({ store_id: storeId, wc_customer_id: order.customer_id })
-            .first<{ id: string } | undefined>();
-          if (customer) {
-            customerUuid = customer.id;
-          }
-        }
+      for (const order of validOrders) {
+        const customerUuid = order.customer_id && order.customer_id > 0
+          ? customerMap.get(order.customer_id) ?? null
+          : null;
 
         // Upsert order
         const [upsertedOrder] = await trx('orders')
@@ -131,30 +172,16 @@ export function createSyncService(deps: SyncServiceDeps) {
         await trx('order_items').where({ order_id: orderId, store_id: storeId }).del();
 
         if (order.items && order.items.length > 0) {
-          // Resolve product UUIDs for items
-          const itemRows = [];
-          for (const item of order.items) {
-            let productUuid: string | null = null;
-            if (item.wc_product_id) {
-              const product = await trx('products')
-                .where({ store_id: storeId, wc_product_id: item.wc_product_id })
-                .first<{ id: string } | undefined>();
-              if (product) {
-                productUuid = product.id;
-              }
-            }
-
-            itemRows.push({
-              order_id: orderId,
-              store_id: storeId,
-              product_id: productUuid,
-              product_name: item.product_name,
-              sku: item.sku ?? null,
-              quantity: item.quantity,
-              subtotal: item.subtotal ?? null,
-              total: item.total ?? null,
-            });
-          }
+          const itemRows = order.items.map((item) => ({
+            order_id: orderId,
+            store_id: storeId,
+            product_id: item.wc_product_id ? productMap.get(item.wc_product_id) ?? null : null,
+            product_name: item.product_name,
+            sku: item.sku ?? null,
+            quantity: item.quantity,
+            subtotal: item.subtotal ?? null,
+            total: item.total ?? null,
+          }));
 
           await trx('order_items').insert(itemRows);
         }

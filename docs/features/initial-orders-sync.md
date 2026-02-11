@@ -46,7 +46,7 @@
 - FR1: `POST /api/sync/orders` accepts `{ orders: [...] }` array
 - FR2: Each order must have: `wc_order_id`, `date_created`, `status`, `total`
 - FR3: Orders are upserted using `ON CONFLICT (store_id, wc_order_id) DO UPDATE`
-- FR4: Order items within each order are upserted using `ON CONFLICT` on `(order_id, store_id, product_name, sku)`
+- FR4: Order items for an order are replaced on each sync (old items are deleted, new items are inserted)
 - FR5: Old order items not in the new payload are deleted (full replacement per order)
 - FR6: A `sync_logs` entry is created at start (status=running) and updated on completion
 - FR7: `store.last_sync_at` is updated on successful sync

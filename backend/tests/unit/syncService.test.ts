@@ -15,7 +15,8 @@ const { createSyncService } = await import('../../src/services/syncService.js');
 
 interface MockQueryBuilder {
   where: jest.Mock;
-  first: jest.Mock<() => Promise<unknown>>;
+  whereIn: jest.Mock<(column: string, values: unknown[]) => Promise<unknown[]>>;
+  select: jest.Mock;
   insert: jest.Mock;
   returning: jest.Mock<() => Promise<unknown[]>>;
   update: jest.Mock<() => Promise<number>>;
@@ -27,7 +28,8 @@ interface MockQueryBuilder {
 function createMockDb() {
   const mockQueryBuilder: MockQueryBuilder = {
     where: jest.fn().mockReturnThis(),
-    first: jest.fn<() => Promise<unknown>>().mockResolvedValue(undefined),
+    whereIn: jest.fn<(column: string, values: unknown[]) => Promise<unknown[]>>().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
     insert: jest.fn().mockReturnThis(),
     returning: jest.fn<() => Promise<unknown[]>>().mockResolvedValue([{ id: 'sync-log-uuid' }]),
     update: jest.fn<() => Promise<number>>().mockResolvedValue(1),
@@ -37,9 +39,11 @@ function createMockDb() {
   };
 
   // Transaction query builder (separate instance for trx calls)
+  // By default, whereIn resolves to [] (no matching customers/products)
   const trxQueryBuilder: MockQueryBuilder = {
     where: jest.fn().mockReturnThis(),
-    first: jest.fn<() => Promise<unknown>>().mockResolvedValue(undefined),
+    whereIn: jest.fn<(column: string, values: unknown[]) => Promise<unknown[]>>().mockResolvedValue([]),
+    select: jest.fn().mockReturnThis(),
     insert: jest.fn().mockReturnThis(),
     returning: jest.fn<() => Promise<unknown[]>>().mockResolvedValue([{ id: 'order-uuid-1' }]),
     update: jest.fn<() => Promise<number>>().mockResolvedValue(1),
@@ -159,9 +163,6 @@ describe('SyncService', () => {
     });
 
     it('upserts a valid order with ON CONFLICT merge', async () => {
-      // trx('orders').insert().onConflict().merge().returning()
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const service = createSyncService({ db });
       const result = await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -182,8 +183,6 @@ describe('SyncService', () => {
     });
 
     it('deletes old order items before inserting new ones', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -197,8 +196,6 @@ describe('SyncService', () => {
     });
 
     it('inserts order items with store_id', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -216,20 +213,20 @@ describe('SyncService', () => {
       );
     });
 
-    it('resolves customer UUID from wc_customer_id', async () => {
-      // First trx('customers').where().first() returns a customer
-      trxQueryBuilder.first.mockResolvedValueOnce({ id: 'customer-uuid-42' });
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
+    it('batch-fetches customer UUIDs and resolves them for orders', async () => {
+      // fetchIdsToMap for customers returns a match
+      trxQueryBuilder.whereIn.mockResolvedValueOnce([
+        { id: 'customer-uuid-42', wc_customer_id: 42 },
+      ]);
+      // fetchIdsToMap for products returns empty
+      trxQueryBuilder.whereIn.mockResolvedValueOnce([]);
 
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
-      // Should look up customer
+      // Should bulk-fetch customers
       expect(trxFn).toHaveBeenCalledWith('customers');
-      expect(trxQueryBuilder.where).toHaveBeenCalledWith({
-        store_id: 'store-123',
-        wc_customer_id: 42,
-      });
+      expect(trxQueryBuilder.select).toHaveBeenCalledWith('id', 'wc_customer_id');
       // Order insert should contain resolved customer UUID
       expect(trxQueryBuilder.insert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -238,10 +235,11 @@ describe('SyncService', () => {
       );
     });
 
-    it('sets customer_id to null when customer not found', async () => {
-      // trx('customers').where().first() returns undefined
-      trxQueryBuilder.first.mockResolvedValueOnce(undefined);
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
+    it('sets customer_id to null when customer not found in bulk fetch', async () => {
+      // fetchIdsToMap for customers returns empty (no match)
+      trxQueryBuilder.whereIn.mockResolvedValueOnce([]);
+      // fetchIdsToMap for products returns empty
+      trxQueryBuilder.whereIn.mockResolvedValueOnce([]);
 
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
@@ -286,8 +284,6 @@ describe('SyncService', () => {
     });
 
     it('handles mixed valid and invalid orders', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const validOrder = makeValidOrder();
       const invalidOrder = { status: 'completed' }; // Missing wc_order_id, date_created, total
 
@@ -298,9 +294,26 @@ describe('SyncService', () => {
       expect(result.skippedCount).toBe(1);
     });
 
-    it('updates store.last_sync_at on success', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
+    it('completes sync log without transaction when all orders are invalid', async () => {
+      const invalidOrder = { status: 'completed' }; // Missing required fields
 
+      const service = createSyncService({ db });
+      const result = await service.upsertOrders('store-123', [invalidOrder]);
+
+      expect(result.syncedCount).toBe(0);
+      expect(result.skippedCount).toBe(1);
+      // Sync log should be completed directly (no transaction needed)
+      expect(mockQueryBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: 'completed',
+          records_synced: 0,
+        }),
+      );
+      // Transaction should NOT have been created
+      expect(db.transaction).not.toHaveBeenCalled();
+    });
+
+    it('updates store.last_sync_at on success', async () => {
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -314,8 +327,6 @@ describe('SyncService', () => {
     });
 
     it('commits transaction on success', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -323,8 +334,6 @@ describe('SyncService', () => {
     });
 
     it('marks sync log as completed on success', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder()]);
 
@@ -338,7 +347,8 @@ describe('SyncService', () => {
     });
 
     it('rolls back transaction and marks sync log as failed on DB error', async () => {
-      trxQueryBuilder.insert.mockImplementationOnce(() => {
+      // fetchIdsToMap calls select().where().whereIn() — make select throw
+      trxQueryBuilder.select.mockImplementationOnce(() => {
         throw new Error('DB connection failed');
       });
 
@@ -359,8 +369,6 @@ describe('SyncService', () => {
     });
 
     it('handles order with no items', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const orderNoItems = makeValidOrder({ items: [] });
       const service = createSyncService({ db });
       const result = await service.upsertOrders('store-123', [orderNoItems]);
@@ -371,8 +379,6 @@ describe('SyncService', () => {
     });
 
     it('handles order with undefined items', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const orderNoItems = makeValidOrder();
       delete (orderNoItems as any).items; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -382,23 +388,28 @@ describe('SyncService', () => {
       expect(result.syncedCount).toBe(1);
     });
 
-    it('resolves product UUID for order items when available', async () => {
-      // First call: customer lookup (undefined)
-      trxQueryBuilder.first.mockResolvedValueOnce(undefined);
-      // After order upsert
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-      // Product lookup returns a product
-      trxQueryBuilder.first.mockResolvedValueOnce({ id: 'product-uuid-501' });
+    it('batch-fetches product UUIDs and resolves them for order items', async () => {
+      // customer_id=0 means no customer lookup, so only product fetchIdsToMap calls whereIn
+      trxQueryBuilder.whereIn.mockResolvedValueOnce([
+        { id: 'product-uuid-501', wc_product_id: 501 },
+      ]);
 
       const service = createSyncService({ db });
       await service.upsertOrders('store-123', [makeValidOrder({ customer_id: 0 })]);
 
       expect(trxFn).toHaveBeenCalledWith('products');
+      expect(trxQueryBuilder.select).toHaveBeenCalledWith('id', 'wc_product_id');
+      // Order items should contain resolved product UUID
+      expect(trxQueryBuilder.insert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            product_id: 'product-uuid-501',
+          }),
+        ]),
+      );
     });
 
     it('defaults currency to USD when not provided', async () => {
-      trxQueryBuilder.returning.mockResolvedValueOnce([{ id: 'order-uuid-1' }]);
-
       const orderNoCurrency = makeValidOrder({ customer_id: 0 });
       delete (orderNoCurrency as any).currency; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -425,6 +436,20 @@ describe('SyncService', () => {
 
       expect(result.syncedCount).toBe(2);
       expect(result.skippedCount).toBe(0);
+    });
+
+    it('skips bulk customer fetch when no orders have customer_id', async () => {
+      const service = createSyncService({ db });
+      await service.upsertOrders('store-123', [makeValidOrder({ customer_id: 0, items: [] })]);
+
+      // fetchIdsToMap should not have been called for customers (empty wcIds)
+      // but should still be called for products. Check that 'customers' table
+      // was NOT queried (no select with wc_customer_id)
+      const selectCalls = trxQueryBuilder.select.mock.calls;
+      const customerSelectCall = selectCalls.find(
+        (call: unknown[]) => call[1] === 'wc_customer_id',
+      );
+      expect(customerSelectCall).toBeUndefined();
     });
   });
 });

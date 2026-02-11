@@ -15,7 +15,7 @@ jest.mock('../../src/utils/logger.js', () => ({
 
 function createMockSyncService() {
   return {
-    upsertOrders: jest.fn<() => Promise<{ syncedCount: number; skippedCount: number; syncLogId: string }>>().mockResolvedValue({
+    upsertOrders: jest.fn<(storeId: string, orders: unknown[]) => Promise<{ syncedCount: number; skippedCount: number; syncLogId: string }>>().mockResolvedValue({
       syncedCount: 1,
       skippedCount: 0,
       syncLogId: 'sync-log-uuid',
@@ -143,7 +143,28 @@ describe('Sync Orders Routes', () => {
       expect(body.error.code).toBe('VALIDATION_ERROR');
     });
 
-    it('returns 200 with partial success (some invalid orders)', async () => {
+    it('returns 400 when an order in the array is missing required fields', async () => {
+      const mockService = createMockSyncService();
+      app = await buildApp(mockService);
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/sync/orders',
+        payload: {
+          orders: [
+            makeValidOrder(),
+            { status: 'incomplete' }, // invalid, missing required fields
+          ],
+        },
+      });
+      const body = JSON.parse(response.body);
+
+      expect(response.statusCode).toBe(400);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('returns 200 with partial success when service reports skipped orders', async () => {
       const mockService = createMockSyncService();
       mockService.upsertOrders.mockResolvedValueOnce({
         syncedCount: 1,
@@ -158,7 +179,7 @@ describe('Sync Orders Routes', () => {
         payload: {
           orders: [
             makeValidOrder(),
-            { status: 'incomplete' }, // invalid, missing required fields
+            makeValidOrder({ wc_order_id: 1002 }),
           ],
         },
       });
