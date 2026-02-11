@@ -13,6 +13,8 @@ const { createSchemaContextService } = await import(
   '../../../src/ai/schemaContext.js'
 );
 
+const VALID_STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
+
 // ── Mock DB builder ─────────────────────────────────────────
 interface MockChain {
   where: jest.Mock;
@@ -72,10 +74,10 @@ describe('SchemaContextService', () => {
       const { db } = createSimpleMockDb();
 
       const service = createSchemaContextService({ db });
-      const result = await service.getStoreContext('store-xyz');
+      const result = await service.getStoreContext(VALID_STORE_ID);
 
       expect(result).toBeDefined();
-      expect(result.storeId).toBe('store-xyz');
+      expect(result.storeId).toBe(VALID_STORE_ID);
     });
 
     it('returns correct store context for a store with data', async () => {
@@ -166,10 +168,10 @@ describe('SchemaContextService', () => {
       });
 
       const service = createSchemaContextService({ db: db as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
-      const ctx = await service.getStoreContext('store-xyz');
+      const ctx = await service.getStoreContext(VALID_STORE_ID);
 
       expect(ctx).toEqual({
-        storeId: 'store-xyz',
+        storeId: VALID_STORE_ID,
         currency: 'EUR',
         totalOrders: 150,
         totalProducts: 42,
@@ -236,9 +238,9 @@ describe('SchemaContextService', () => {
       });
 
       const service = createSchemaContextService({ db: db as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
-      const ctx = await service.getStoreContext('empty-store');
+      const ctx = await service.getStoreContext(VALID_STORE_ID);
 
-      expect(ctx.storeId).toBe('empty-store');
+      expect(ctx.storeId).toBe(VALID_STORE_ID);
       expect(ctx.currency).toBe('USD');
       expect(ctx.totalOrders).toBe(0);
       expect(ctx.totalProducts).toBe(0);
@@ -249,7 +251,7 @@ describe('SchemaContextService', () => {
     });
 
     it('queries all tables with store_id filter', async () => {
-      const storeId = 'tenant-isolation-test';
+      const storeId = VALID_STORE_ID;
       const whereSpies: Array<{ table: string; spy: jest.Mock }> = [];
 
       const db = jest.fn((tableName: string) => {
@@ -350,12 +352,52 @@ describe('SchemaContextService', () => {
       });
 
       const service = createSchemaContextService({ db: db as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
-      const ctx = await service.getStoreContext('store-null');
+      const ctx = await service.getStoreContext(VALID_STORE_ID);
 
       expect(ctx.totalOrders).toBe(0);
       expect(ctx.earliestOrderDate).toBeNull();
       expect(ctx.latestOrderDate).toBeNull();
       expect(ctx.currency).toBe('USD');
+    });
+
+    it('rejects empty storeId with ValidationError', async () => {
+      const { db } = createSimpleMockDb();
+      const service = createSchemaContextService({ db });
+
+      await expect(service.getStoreContext('')).rejects.toThrow(
+        'Invalid storeId: must be a valid UUID',
+      );
+    });
+
+    it('rejects non-UUID storeId with ValidationError', async () => {
+      const { db } = createSimpleMockDb();
+      const service = createSchemaContextService({ db });
+
+      await expect(service.getStoreContext('not-a-uuid')).rejects.toThrow(
+        'Invalid storeId: must be a valid UUID',
+      );
+    });
+
+    it('wraps database errors with AppError context', async () => {
+      const dbError = new Error('Connection refused');
+
+      const db = jest.fn(() => {
+        return {
+          where: jest.fn(() => {
+            throw dbError;
+          }),
+        };
+      });
+
+      Object.assign(db, {
+        raw: jest.fn().mockReturnValue('RAW_SQL'),
+      });
+
+      const service = createSchemaContextService({ db: db as any }); // eslint-disable-line @typescript-eslint/no-explicit-any
+
+      await expect(service.getStoreContext(VALID_STORE_ID)).rejects.toThrow(
+        'Failed to fetch schema context',
+      );
     });
   });
 });

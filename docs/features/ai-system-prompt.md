@@ -50,8 +50,9 @@ No direct API endpoints. Internal modules consumed by NL→SQL pipeline (task 3.
 
 ### Module Exports
 - `buildSystemPrompt(storeContext: StoreContext): string` — Builds the full system prompt
-- `getFewShotExamples(): FewShotExample[]` — Returns all few-shot examples
-- `getSchemaContext(db: Knex, storeId: string): Promise<StoreContext>` — Fetches store metadata
+- `getFewShotExamples(): readonly FewShotExample[]` — Returns all few-shot examples
+- `createSchemaContextService(deps: SchemaContextDeps): SchemaContextService` — Creates the schema context service
+  - `getStoreContext(storeId: string): Promise<StoreContext>` — Fetches store metadata (from service instance)
 
 ## 6. Data Model Impact
 - No new tables or migrations

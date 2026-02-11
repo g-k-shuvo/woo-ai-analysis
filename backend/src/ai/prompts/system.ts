@@ -18,8 +18,8 @@ Columns: id (UUID), order_id (UUID), store_id (UUID), product_id (UUID), product
 Columns: id (UUID), store_id (UUID), wc_product_id (INTEGER), name (VARCHAR), sku (VARCHAR), price (DECIMAL), regular_price (DECIMAL), sale_price (DECIMAL), category_id (UUID), category_name (VARCHAR), stock_quantity (INTEGER), stock_status (VARCHAR - instock|outofstock|onbackorder), status (VARCHAR - publish|draft|private), type (VARCHAR - simple|variable|grouped), created_at (TIMESTAMPTZ), updated_at (TIMESTAMPTZ)
 
 ### customers
-Columns: id (UUID), store_id (UUID), wc_customer_id (INTEGER), display_name (VARCHAR), total_spent (DECIMAL), order_count (INTEGER), first_order_date (TIMESTAMPTZ), last_order_date (TIMESTAMPTZ), created_at (TIMESTAMPTZ)
-Note: Customer emails are stored as hashes for privacy. Never attempt to query or return email addresses.
+Columns: id (UUID), store_id (UUID), wc_customer_id (INTEGER), display_name (VARCHAR), email_hash (VARCHAR — DO NOT SELECT), total_spent (DECIMAL), order_count (INTEGER), first_order_date (TIMESTAMPTZ), last_order_date (TIMESTAMPTZ), created_at (TIMESTAMPTZ)
+Note: email_hash contains SHA-256 hashes for internal use only. NEVER select or return email_hash in queries.
 
 ### categories
 Columns: id (UUID), store_id (UUID), wc_category_id (INTEGER), name (VARCHAR), parent_id (UUID), product_count (INTEGER)
@@ -43,7 +43,6 @@ const RESPONSE_FORMAT = `## Response Format
 You MUST respond with valid JSON in this exact format:
 {
   "sql": "SELECT ... FROM ... WHERE store_id = $1 ...",
-  "params": ["store_id_value"],
   "explanation": "Brief explanation of what the query does",
   "chartSpec": {
     "type": "bar|line|pie|doughnut|table",
@@ -55,6 +54,7 @@ You MUST respond with valid JSON in this exact format:
   }
 }
 
+Always use $1 as the store_id placeholder. The system will inject the actual value as a query parameter.
 Set chartSpec to null for simple aggregate queries that return a single number.
 Use "table" type for multi-column result sets that don't suit a chart.`;
 
@@ -83,7 +83,7 @@ export function buildSystemPrompt(storeContext: StoreContext): string {
 function buildMetadataSection(ctx: StoreContext): string {
   const lines = ['## Store Metadata'];
 
-  lines.push(`- Store ID (use as $1 parameter): ${ctx.storeId}`);
+  lines.push('- Store ID: Provided as query parameter $1. Always use $1 in WHERE clauses.');
   lines.push(`- Store currency: ${ctx.currency}`);
   lines.push(`- Total orders: ${ctx.totalOrders}`);
   lines.push(`- Total products: ${ctx.totalProducts}`);

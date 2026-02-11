@@ -6,7 +6,7 @@ import {
 import type { FewShotExample } from '../../../src/ai/prompts/examples.js';
 
 describe('getFewShotExamples', () => {
-  let examples: FewShotExample[];
+  let examples: readonly FewShotExample[];
 
   beforeAll(() => {
     examples = getFewShotExamples();
@@ -21,11 +21,10 @@ describe('getFewShotExamples', () => {
     expect(examples.length).toBeGreaterThanOrEqual(10);
   });
 
-  it('returns a new array each time (not a reference)', () => {
+  it('returns the same readonly array reference', () => {
     const a = getFewShotExamples();
     const b = getFewShotExamples();
-    expect(a).not.toBe(b);
-    expect(a).toEqual(b);
+    expect(a).toBe(b);
   });
 
   // ── Category coverage ─────────────────────────────────────
@@ -99,6 +98,30 @@ describe('getFewShotExamples', () => {
     it('no example SQL contains ALTER', () => {
       for (const ex of examples) {
         expect(ex.sql.toUpperCase()).not.toMatch(/\bALTER\b/);
+      }
+    });
+
+    it('no example SQL contains CREATE', () => {
+      for (const ex of examples) {
+        expect(ex.sql.toUpperCase()).not.toMatch(/\bCREATE\b/);
+      }
+    });
+
+    it('no example SQL contains TRUNCATE', () => {
+      for (const ex of examples) {
+        expect(ex.sql.toUpperCase()).not.toMatch(/\bTRUNCATE\b/);
+      }
+    });
+
+    it('no example SQL contains GRANT', () => {
+      for (const ex of examples) {
+        expect(ex.sql.toUpperCase()).not.toMatch(/\bGRANT\b/);
+      }
+    });
+
+    it('no example SQL contains REVOKE', () => {
+      for (const ex of examples) {
+        expect(ex.sql.toUpperCase()).not.toMatch(/\bREVOKE\b/);
       }
     });
 

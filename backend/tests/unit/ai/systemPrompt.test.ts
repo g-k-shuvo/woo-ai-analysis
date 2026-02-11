@@ -59,6 +59,12 @@ describe('buildSystemPrompt', () => {
       expect(prompt).toContain('total_spent (DECIMAL)');
     });
 
+    it('includes email_hash with DO NOT SELECT annotation', () => {
+      const prompt = buildSystemPrompt(makeStoreContext());
+      expect(prompt).toContain('email_hash');
+      expect(prompt).toContain('DO NOT SELECT');
+    });
+
     it('includes the categories table schema', () => {
       const prompt = buildSystemPrompt(makeStoreContext());
       expect(prompt).toContain('### categories');
@@ -89,9 +95,10 @@ describe('buildSystemPrompt', () => {
 
   // ── Store metadata ────────────────────────────────────────
   describe('store metadata', () => {
-    it('includes the store ID', () => {
+    it('does not leak the actual store ID into the prompt', () => {
       const prompt = buildSystemPrompt(makeStoreContext());
-      expect(prompt).toContain('store-abc-123');
+      expect(prompt).not.toContain('store-abc-123');
+      expect(prompt).toContain('$1');
     });
 
     it('includes the store currency', () => {
@@ -199,9 +206,13 @@ describe('buildSystemPrompt', () => {
       const prompt = buildSystemPrompt(makeStoreContext());
       expect(prompt).toContain('Response Format');
       expect(prompt).toContain('"sql"');
-      expect(prompt).toContain('"params"');
       expect(prompt).toContain('"explanation"');
       expect(prompt).toContain('"chartSpec"');
+    });
+
+    it('does not ask the AI to return params (system injects them)', () => {
+      const prompt = buildSystemPrompt(makeStoreContext());
+      expect(prompt).not.toContain('"params"');
     });
 
     it('includes chart type options', () => {

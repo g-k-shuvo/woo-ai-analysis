@@ -99,7 +99,7 @@ const examples: readonly FewShotExample[] = [
   {
     category: 'order',
     question: 'What is the breakdown of orders by status?',
-    sql: `SELECT status, COUNT(*) AS order_count FROM orders WHERE store_id = $1 GROUP BY status ORDER BY order_count DESC LIMIT 20`,
+    sql: `SELECT status, COUNT(*) AS order_count FROM orders WHERE store_id = $1 GROUP BY status ORDER BY order_count DESC LIMIT 100`,
     explanation: 'Groups all orders by status for this store.',
   },
   {
@@ -109,10 +109,10 @@ const examples: readonly FewShotExample[] = [
     explanation:
       'Counts orders by payment method, excluding nulls.',
   },
-] as const;
+];
 
-export function getFewShotExamples(): FewShotExample[] {
-  return [...examples];
+export function getFewShotExamples(): readonly FewShotExample[] {
+  return examples;
 }
 
 export function formatFewShotExamples(): string {
