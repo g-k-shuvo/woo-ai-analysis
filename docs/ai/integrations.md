@@ -14,13 +14,15 @@
    - HPOS tables: `wp_wc_orders`, `wp_wc_orders_meta` (not `wp_posts`)
    - Always check `wc_get_container()->get(CustomOrdersTableController::class)->custom_orders_table_usage_is_enabled()`
 
-3. **WooCommerce Webhooks** (for real-time incremental sync)
-   - `woocommerce_new_order` → sync new order to backend
-   - `woocommerce_update_order` → update existing order
-   - `woocommerce_order_status_changed` → update order status
-   - `woocommerce_new_product` / `woocommerce_update_product`
-   - `woocommerce_created_customer` / `woocommerce_update_customer`
-   - Webhooks registered on plugin activation, removed on deactivation
+3. **WooCommerce Action Hooks** (for real-time incremental sync — IMPLEMENTED)
+   - `woocommerce_new_order` / `woocommerce_update_order` → POST /api/sync/webhook (resource=order)
+   - `woocommerce_new_product` / `woocommerce_update_product` → POST /api/sync/webhook (resource=product)
+   - `woocommerce_created_customer` / `woocommerce_update_customer` → POST /api/sync/webhook (resource=customer)
+   - `create_product_cat` / `edited_product_cat` → POST /api/sync/webhook (resource=category)
+   - Implemented in `plugin/includes/class-webhooks.php`
+   - Fire-and-forget (`blocking: false`) — never blocks WooCommerce operations
+   - Only fires when store is connected (has API key)
+   - Backend logs sync as `webhook:orders`, `webhook:products`, etc. in sync_logs
 
 ### HPOS Compatibility (Critical)
 WooCommerce High-Performance Order Storage is now default. Never use:

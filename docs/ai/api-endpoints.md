@@ -26,6 +26,7 @@ All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
 | POST | `/api/sync/customers` | Upsert customers batch. Body: `{ customers: [...] }` |
 | POST | `/api/sync/categories` | Upsert categories batch |
 | POST | `/api/sync/coupons` | Upsert coupons batch |
+| POST | `/api/sync/webhook` | Incremental sync single entity. Body: `{ resource, action, data }` |
 | GET | `/api/sync/status` | Get sync health: last sync time, record counts, errors |
 | POST | `/api/sync/full` | Trigger a full re-sync |
 

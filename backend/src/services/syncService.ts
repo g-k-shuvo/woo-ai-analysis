@@ -49,6 +49,7 @@ export interface ProductPayload {
 export interface CustomerPayload {
   wc_customer_id: number;
   email?: string;
+  email_hash?: string;
   display_name?: string;
   total_spent?: number;
   order_count?: number;
@@ -137,7 +138,7 @@ async function fetchIdsToMap(
 export function createSyncService(deps: SyncServiceDeps) {
   const { db } = deps;
 
-  async function upsertOrders(storeId: string, orders: unknown[]): Promise<UpsertOrdersResult> {
+  async function upsertOrders(storeId: string, orders: unknown[], syncType = 'orders'): Promise<UpsertOrdersResult> {
     if (!Array.isArray(orders)) {
       throw new ValidationError('orders must be an array');
     }
@@ -146,7 +147,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const [syncLog] = await db('sync_logs')
       .insert({
         store_id: storeId,
-        sync_type: 'orders',
+        sync_type: syncType,
         status: 'running',
         records_synced: 0,
       })
@@ -285,7 +286,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     }
   }
 
-  async function upsertProducts(storeId: string, products: unknown[]): Promise<UpsertResult> {
+  async function upsertProducts(storeId: string, products: unknown[], syncType = 'products'): Promise<UpsertResult> {
     if (!Array.isArray(products)) {
       throw new ValidationError('products must be an array');
     }
@@ -293,7 +294,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const [syncLog] = await db('sync_logs')
       .insert({
         store_id: storeId,
-        sync_type: 'products',
+        sync_type: syncType,
         status: 'running',
         records_synced: 0,
       })
@@ -402,7 +403,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     }
   }
 
-  async function upsertCustomers(storeId: string, customers: unknown[]): Promise<UpsertResult> {
+  async function upsertCustomers(storeId: string, customers: unknown[], syncType = 'customers'): Promise<UpsertResult> {
     if (!Array.isArray(customers)) {
       throw new ValidationError('customers must be an array');
     }
@@ -410,7 +411,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const [syncLog] = await db('sync_logs')
       .insert({
         store_id: storeId,
-        sync_type: 'customers',
+        sync_type: syncType,
         status: 'running',
         records_synced: 0,
       })
@@ -455,7 +456,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const trx = await db.transaction();
     try {
       for (const customer of validCustomers) {
-        const emailHash = customer.email ? hashEmail(customer.email) : null;
+        const emailHash = customer.email_hash ?? (customer.email ? hashEmail(customer.email) : null);
 
         await trx('customers')
           .insert({
@@ -503,7 +504,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     }
   }
 
-  async function upsertCategories(storeId: string, categories: unknown[]): Promise<UpsertResult> {
+  async function upsertCategories(storeId: string, categories: unknown[], syncType = 'categories'): Promise<UpsertResult> {
     if (!Array.isArray(categories)) {
       throw new ValidationError('categories must be an array');
     }
@@ -511,7 +512,7 @@ export function createSyncService(deps: SyncServiceDeps) {
     const [syncLog] = await db('sync_logs')
       .insert({
         store_id: storeId,
-        sync_type: 'categories',
+        sync_type: syncType,
         status: 'running',
         records_synced: 0,
       })
