@@ -1,9 +1,11 @@
 /**
- * Chat query route — POST /api/chat/query
+ * Chat routes — POST /api/chat/query + GET /api/chat/suggestions
  *
- * Accepts a natural language question from the store owner,
- * orchestrates the AI pipeline via chatService, and returns
- * the answer with optional chart configuration.
+ * POST /api/chat/query: Accepts a natural language question from the store owner,
+ * orchestrates the AI pipeline via chatService, and returns the answer with optional
+ * chart configuration.
+ *
+ * GET /api/chat/suggestions: Returns suggested questions for the chat UI.
  *
  * Auth required: Bearer token (verified by auth middleware).
  */
@@ -35,6 +37,16 @@ export async function chatQueryRoutes(fastify: FastifyInstance, deps: ChatQueryD
     const { question } = request.body;
 
     const result = await chatService.ask(store.id, question);
+
+    return reply.status(200).send({
+      success: true,
+      data: result,
+    });
+  });
+
+  // GET /api/chat/suggestions — get suggested questions (auth required)
+  fastify.get('/api/chat/suggestions', async (_request, reply) => {
+    const result = chatService.getSuggestions();
 
     return reply.status(200).send({
       success: true,

@@ -36,6 +36,19 @@ export interface ChatSpecSummary {
   title: string;
 }
 
+export interface SuggestionsResponse {
+  suggestions: string[];
+}
+
+const DEFAULT_SUGGESTIONS: string[] = [
+  'What was my total revenue this month?',
+  'What are my top 5 selling products?',
+  'How many new customers did I get this week?',
+  'What is my average order value?',
+  'Show revenue trend for the last 30 days',
+  'Which product categories perform best?',
+];
+
 export function createChatService(deps: ChatServiceDeps) {
   const { aiPipeline, queryExecutor } = deps;
 
@@ -83,7 +96,13 @@ export function createChatService(deps: ChatServiceDeps) {
     return response;
   }
 
-  return { ask };
+  function getSuggestions(): SuggestionsResponse {
+    return { suggestions: [...DEFAULT_SUGGESTIONS] };
+  }
+
+  return { ask, getSuggestions };
 }
 
 export type ChatService = ReturnType<typeof createChatService>;
+
+export { DEFAULT_SUGGESTIONS };
