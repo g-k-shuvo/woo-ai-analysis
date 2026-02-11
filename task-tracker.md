@@ -27,7 +27,7 @@
 - [x] **3.4** Read-only DB user — PostgreSQL user with SELECT-only permissions
 - [x] **3.5** Query execution — Run validated SQL, return results
 - [x] **3.6** Revenue queries — Total, by period, comparisons
-- [ ] **3.7** Product queries — Top sellers, category performance
+- [x] **3.7** Product queries — Top sellers, category performance
 - [ ] **3.8** Customer queries — New vs returning, top spenders
 - [ ] **3.9** Order queries — Count, AOV, status breakdown
 - [ ] **3.10** Chart spec generation — AI outputs chart type + config

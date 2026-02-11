@@ -86,6 +86,34 @@ const examples: readonly FewShotExample[] = [
     sql: `SELECT COUNT(*) AS in_stock_count FROM products WHERE store_id = $1 AND stock_status = 'instock' AND status = 'publish' LIMIT 1`,
     explanation: 'Counts published products with instock status.',
   },
+  {
+    category: 'product',
+    question: 'What are my top 5 products by revenue?',
+    sql: `SELECT p.name, ROUND(SUM(oi.total), 2) AS total_revenue, SUM(oi.quantity) AS total_sold FROM order_items oi JOIN products p ON oi.product_id = p.id AND p.store_id = $1 JOIN orders o ON oi.order_id = o.id AND o.store_id = $1 WHERE oi.store_id = $1 AND o.status IN ('completed', 'processing') GROUP BY p.name ORDER BY total_revenue DESC LIMIT 5`,
+    explanation:
+      'Joins order_items with products to get top sellers by revenue.',
+  },
+  {
+    category: 'product',
+    question: 'Which products are low on stock?',
+    sql: `SELECT name, sku, stock_quantity, COALESCE(price, 0) AS price FROM products WHERE store_id = $1 AND stock_status = 'instock' AND status = 'publish' AND stock_quantity IS NOT NULL AND stock_quantity <= 5 ORDER BY stock_quantity ASC LIMIT 20`,
+    explanation:
+      'Lists published products with stock at or below 5 units, sorted by lowest first.',
+  },
+  {
+    category: 'product',
+    question: 'Which products are out of stock?',
+    sql: `SELECT name, sku, COALESCE(price, 0) AS price FROM products WHERE store_id = $1 AND stock_status = 'outofstock' AND status = 'publish' ORDER BY name ASC LIMIT 50`,
+    explanation:
+      'Lists all published products currently marked as out of stock.',
+  },
+  {
+    category: 'product',
+    question: 'What were my best selling products last month?',
+    sql: `SELECT p.name, SUM(oi.quantity) AS total_sold, ROUND(SUM(oi.total), 2) AS total_revenue FROM order_items oi JOIN products p ON oi.product_id = p.id AND p.store_id = $1 JOIN orders o ON oi.order_id = o.id AND o.store_id = $1 WHERE oi.store_id = $1 AND o.status IN ('completed', 'processing') AND o.date_created >= DATE_TRUNC('month', NOW()) - INTERVAL '1 month' AND o.date_created < DATE_TRUNC('month', NOW()) GROUP BY p.name ORDER BY total_sold DESC LIMIT 10`,
+    explanation:
+      'Joins order_items with products for orders in the previous calendar month.',
+  },
 
   // ── Customer ──────────────────────────────────────────────
   {
