@@ -49,6 +49,7 @@ final class Plugin {
 	private function load_includes(): void {
 		require_once WAA_PLUGIN_DIR . 'includes/class-admin-ui.php';
 		require_once WAA_PLUGIN_DIR . 'includes/class-settings.php';
+		require_once WAA_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 		require_once WAA_PLUGIN_DIR . 'includes/class-webhooks.php';
 	}
 
@@ -61,6 +62,7 @@ final class Plugin {
 		if ( is_admin() ) {
 			Admin_UI::get_instance();
 			Settings::get_instance();
+			Ajax_Handler::get_instance();
 		}
 
 		// Webhook hooks run on both admin and frontend (cron, REST API contexts).
