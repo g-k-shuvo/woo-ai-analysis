@@ -109,6 +109,16 @@ final class Admin_UI {
 			true
 		);
 
+		$css_file = WAA_PLUGIN_DIR . 'assets/js/admin.css';
+		if ( file_exists( $css_file ) ) {
+			wp_enqueue_style(
+				'woo-ai-analytics-admin',
+				WAA_PLUGIN_URL . 'assets/js/admin.css',
+				array(),
+				$asset['version']
+			);
+		}
+
 		wp_localize_script(
 			'woo-ai-analytics-admin',
 			'waaData',

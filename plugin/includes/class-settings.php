@@ -357,9 +357,10 @@ final class Settings {
 			);
 		}
 
-		$body = json_decode( wp_remote_retrieve_body( $response ), true );
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( ! is_array( $body ) || empty( $body['success'] ) ) {
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
 			$error_msg = __( 'Failed to fetch sync status.', 'woo-ai-analytics' );
 			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
 				$error_msg = sanitize_text_field( $body['error']['message'] );

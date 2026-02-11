@@ -81,6 +81,16 @@ export interface SyncLogEntry {
   errorMessage: string | null;
 }
 
+interface SyncLogDbRow {
+  id: string;
+  sync_type: string;
+  records_synced: number;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+}
+
 export interface SyncStatusResult {
   lastSyncAt: string | null;
   recordCounts: {
@@ -656,15 +666,7 @@ export function createSyncService(deps: SyncServiceDeps) {
       .orderBy('started_at', 'desc')
       .limit(10);
 
-    const recentSyncs: SyncLogEntry[] = syncLogs.map((log: {
-      id: string;
-      sync_type: string;
-      records_synced: number;
-      status: string;
-      started_at: string;
-      completed_at: string | null;
-      error_message: string | null;
-    }) => ({
+    const recentSyncs: SyncLogEntry[] = (syncLogs as SyncLogDbRow[]).map((log) => ({
       id: log.id,
       syncType: log.sync_type,
       recordsSynced: log.records_synced,

@@ -3,6 +3,7 @@ import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { syncStatusRoutes } from '../../src/routes/sync/status.js';
 import { registerErrorHandler } from '../../src/middleware/errorHandler.js';
+import type { SyncStatusResult } from '../../src/services/syncService.js';
 
 // Mock logger
 jest.mock('../../src/utils/logger.js', () => ({
@@ -15,19 +16,7 @@ jest.mock('../../src/utils/logger.js', () => ({
 
 function createMockSyncService() {
   return {
-    getSyncStatus: jest.fn<(storeId: string) => Promise<{
-      lastSyncAt: string | null;
-      recordCounts: { orders: number; products: number; customers: number; categories: number };
-      recentSyncs: Array<{
-        id: string;
-        syncType: string;
-        recordsSynced: number;
-        status: string;
-        startedAt: string;
-        completedAt: string | null;
-        errorMessage: string | null;
-      }>;
-    }>>().mockResolvedValue({
+    getSyncStatus: jest.fn<(storeId: string) => Promise<SyncStatusResult>>().mockResolvedValue({
       lastSyncAt: '2026-02-11T10:30:00Z',
       recordCounts: {
         orders: 1250,
