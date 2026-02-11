@@ -28,6 +28,7 @@ export interface QueryExecutionResult {
   rows: Record<string, unknown>[];
   rowCount: number;
   durationMs: number;
+  truncated: boolean;
 }
 
 export interface OpenAIResponse {

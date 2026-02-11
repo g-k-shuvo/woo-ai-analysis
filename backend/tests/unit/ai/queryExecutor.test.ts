@@ -38,6 +38,38 @@ describe('createQueryExecutor', () => {
     jest.clearAllMocks();
   });
 
+  describe('input validation', () => {
+    it('throws AIError when sql is empty', async () => {
+      const mockDb = makeMockDb();
+      const executor = createQueryExecutor({ readonlyDb: mockDb as never });
+
+      await expect(executor.execute(makeQueryResult({ sql: '' }))).rejects.toThrow(
+        'Cannot execute empty SQL query.',
+      );
+      expect(mockDb.raw).not.toHaveBeenCalled();
+    });
+
+    it('throws AIError when sql is only whitespace', async () => {
+      const mockDb = makeMockDb();
+      const executor = createQueryExecutor({ readonlyDb: mockDb as never });
+
+      await expect(executor.execute(makeQueryResult({ sql: '   ' }))).rejects.toThrow(
+        'Cannot execute empty SQL query.',
+      );
+      expect(mockDb.raw).not.toHaveBeenCalled();
+    });
+
+    it('throws AIError when params is empty', async () => {
+      const mockDb = makeMockDb();
+      const executor = createQueryExecutor({ readonlyDb: mockDb as never });
+
+      await expect(executor.execute(makeQueryResult({ params: [] }))).rejects.toThrow(
+        'Query params must include at least store_id.',
+      );
+      expect(mockDb.raw).not.toHaveBeenCalled();
+    });
+  });
+
   describe('successful execution', () => {
     it('executes SQL with correct params via readonlyDb.raw', async () => {
       const mockDb = makeMockDb([{ total: '42' }]);
@@ -86,6 +118,15 @@ describe('createQueryExecutor', () => {
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
     });
 
+    it('returns truncated as false when rows are below MAX_ROWS', async () => {
+      const mockDb = makeMockDb([{ total: '1' }]);
+      const executor = createQueryExecutor({ readonlyDb: mockDb as never });
+
+      const result = await executor.execute(makeQueryResult());
+
+      expect(result.truncated).toBe(false);
+    });
+
     it('returns empty rows for queries with no results', async () => {
       const mockDb = makeMockDb([]);
       const executor = createQueryExecutor({ readonlyDb: mockDb as never });
@@ -94,6 +135,7 @@ describe('createQueryExecutor', () => {
 
       expect(result.rows).toEqual([]);
       expect(result.rowCount).toBe(0);
+      expect(result.truncated).toBe(false);
     });
 
     it('handles result object without rows property', async () => {
@@ -107,11 +149,12 @@ describe('createQueryExecutor', () => {
 
       expect(result.rows).toEqual([]);
       expect(result.rowCount).toBe(0);
+      expect(result.truncated).toBe(false);
     });
   });
 
   describe('row truncation', () => {
-    it('truncates rows to MAX_ROWS (1000) if exceeded', async () => {
+    it('truncates rows to MAX_ROWS (1000) if exceeded and sets truncated to true', async () => {
       const largeRowSet = Array.from({ length: 1500 }, (_, i) => ({ id: i }));
       const mockDb = makeMockDb(largeRowSet);
       const executor = createQueryExecutor({ readonlyDb: mockDb as never });
@@ -120,6 +163,7 @@ describe('createQueryExecutor', () => {
 
       expect(result.rows.length).toBe(1000);
       expect(result.rowCount).toBe(1000);
+      expect(result.truncated).toBe(true);
     });
 
     it('does not truncate rows at exactly MAX_ROWS', async () => {
@@ -131,6 +175,7 @@ describe('createQueryExecutor', () => {
 
       expect(result.rows.length).toBe(1000);
       expect(result.rowCount).toBe(1000);
+      expect(result.truncated).toBe(false);
     });
 
     it('does not truncate rows below MAX_ROWS', async () => {
@@ -142,6 +187,20 @@ describe('createQueryExecutor', () => {
 
       expect(result.rows.length).toBe(50);
       expect(result.rowCount).toBe(50);
+      expect(result.truncated).toBe(false);
+    });
+
+    it('logs a warning when truncation occurs', async () => {
+      const largeRowSet = Array.from({ length: 1500 }, (_, i) => ({ id: i }));
+      const mockDb = makeMockDb(largeRowSet);
+      const executor = createQueryExecutor({ readonlyDb: mockDb as never });
+
+      await executor.execute(makeQueryResult());
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        { originalCount: 1500, maxRows: 1000 },
+        'Query executor: result set truncated',
+      );
     });
   });
 
@@ -229,12 +288,9 @@ describe('createQueryExecutor', () => {
       };
       const executor = createQueryExecutor({ readonlyDb: mockDb as never });
 
-      try {
-        await executor.execute(makeQueryResult());
-        expect(true).toBe(false); // should not reach here
-      } catch (err) {
-        expect((err as Error).cause).toBe(originalError);
-      }
+      await expect(executor.execute(makeQueryResult())).rejects.toMatchObject({
+        cause: originalError,
+      });
     });
   });
 

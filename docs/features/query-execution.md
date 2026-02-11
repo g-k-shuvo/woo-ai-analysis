@@ -16,7 +16,7 @@
 ### In scope
 - `queryExecutor` module that accepts validated `AIQueryResult` and executes it via `readonlyDb`
 - Execution timing and structured logging
-- Row count enforcement (reject if exceeds MAX_ROWS)
+- Row count enforcement (truncate to MAX_ROWS if exceeded)
 - Error classification (timeout, permission denied, syntax, generic)
 - `QueryExecutionResult` type containing rows, rowCount, and durationMs
 - Unit tests (mocked Knex) and integration tests (real readonly DB)
@@ -42,7 +42,7 @@
 ### Non-functional Requirements
 - Performance: Query execution inherits 5-second timeout from readonlyDb connection pool
 - Security: Only runs pre-validated SELECT queries with parameterized store_id
-- Observability: Structured pino logging with storeId, durationMs, rowCount
+- Observability: Structured pino logging with durationMs, rowCount, truncation warnings
 
 ## 5. UX / API Contract
 
@@ -64,6 +64,7 @@ interface QueryExecutionResult {
   rows: Record<string, unknown>[];
   rowCount: number;
   durationMs: number;
+  truncated: boolean;
 }
 ```
 

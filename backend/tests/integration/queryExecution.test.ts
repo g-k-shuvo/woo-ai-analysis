@@ -25,10 +25,12 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
 const { createReadonlyDb } = await import('../../src/db/readonlyConnection.js');
 const { createQueryExecutor } = await import('../../src/ai/queryExecutor.js');
 
+// DEV ONLY: These credentials are for local Docker development. Never use in production.
 const READONLY_URL =
   process.env.DATABASE_READONLY_URL ||
   'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5432/woo_ai_analytics';
 
+// DEV ONLY: These credentials are for local Docker development. Never use in production.
 const PRIMARY_URL =
   process.env.DATABASE_URL ||
   'postgresql://woo_ai:woo_ai_pass@localhost:5432/woo_ai_analytics';
@@ -119,6 +121,7 @@ describe('Query executor integration', () => {
       expect(result.rowCount).toBe(1);
       expect(parseInt(result.rows[0].total as string, 10)).toBe(3);
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
+      expect(result.truncated).toBe(false);
     });
 
     it('executes a SELECT query and returns multiple rows', async () => {
@@ -173,6 +176,7 @@ describe('Query executor integration', () => {
 
       expect(result.rows).toEqual([]);
       expect(result.rowCount).toBe(0);
+      expect(result.truncated).toBe(false);
     });
   });
 
