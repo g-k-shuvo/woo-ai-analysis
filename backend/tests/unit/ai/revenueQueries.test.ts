@@ -301,7 +301,7 @@ describe('createRevenueQueries', () => {
       // Should have two whereRaw calls for date boundaries
       expect(builder.whereRaw).toHaveBeenCalledTimes(2);
       const rawCalls = builder.whereRaw.mock.calls as unknown[][];
-      expect(String(rawCalls[0][0])).toContain("DATE_TRUNC('month', NOW())");
+      expect(String(rawCalls[0][0])).toContain("DATE_TRUNC('month', NOW() AT TIME ZONE 'UTC')");
       expect(String(rawCalls[1][0])).toContain('NOW()');
     });
 

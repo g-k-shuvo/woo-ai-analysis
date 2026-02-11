@@ -17,7 +17,7 @@ import { logger } from '../utils/logger.js';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
 
-const REVENUE_STATUSES = ['completed', 'processing'];
+const REVENUE_STATUSES = ['completed', 'processing'] as const;
 
 export type RevenuePeriod =
   | 'today'
@@ -76,31 +76,31 @@ function getPeriodBoundaries(period: RevenuePeriod): {
   switch (period) {
     case 'today':
       return {
-        currentStart: "DATE_TRUNC('day', NOW())",
+        currentStart: "(DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
         currentEnd: 'NOW()',
-        previousStart: "DATE_TRUNC('day', NOW()) - INTERVAL '1 day'",
-        previousEnd: "DATE_TRUNC('day', NOW())",
+        previousStart: "(DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') - INTERVAL '1 day'",
+        previousEnd: "(DATE_TRUNC('day', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
       };
     case 'this_week':
       return {
-        currentStart: "DATE_TRUNC('week', NOW())",
+        currentStart: "(DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
         currentEnd: 'NOW()',
-        previousStart: "DATE_TRUNC('week', NOW()) - INTERVAL '1 week'",
-        previousEnd: "DATE_TRUNC('week', NOW())",
+        previousStart: "(DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') - INTERVAL '1 week'",
+        previousEnd: "(DATE_TRUNC('week', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
       };
     case 'this_month':
       return {
-        currentStart: "DATE_TRUNC('month', NOW())",
+        currentStart: "(DATE_TRUNC('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
         currentEnd: 'NOW()',
-        previousStart: "DATE_TRUNC('month', NOW()) - INTERVAL '1 month'",
-        previousEnd: "DATE_TRUNC('month', NOW())",
+        previousStart: "(DATE_TRUNC('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') - INTERVAL '1 month'",
+        previousEnd: "(DATE_TRUNC('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
       };
     case 'this_year':
       return {
-        currentStart: "DATE_TRUNC('year', NOW())",
+        currentStart: "(DATE_TRUNC('year', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
         currentEnd: 'NOW()',
-        previousStart: "DATE_TRUNC('year', NOW()) - INTERVAL '1 year'",
-        previousEnd: "DATE_TRUNC('year', NOW())",
+        previousStart: "(DATE_TRUNC('year', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') - INTERVAL '1 year'",
+        previousEnd: "(DATE_TRUNC('year', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",
       };
     case 'last_7_days':
       return {
@@ -360,12 +360,12 @@ export function createRevenueQueries(deps: RevenueQueryDeps) {
         .whereIn('status', REVENUE_STATUSES)
         .whereRaw(`date_created >= NOW() - INTERVAL '${periods} ${intervalUnit}'`)
         .select(
-          readonlyDb.raw(`DATE_TRUNC('${truncUnit}', date_created) AS period`),
+          readonlyDb.raw(`DATE_TRUNC('${truncUnit}', date_created AT TIME ZONE 'UTC') AS period`),
           readonlyDb.raw('COALESCE(ROUND(SUM(total), 2), 0) AS total_revenue'),
           readonlyDb.raw('COUNT(*) AS order_count'),
         )
-        .groupByRaw(`DATE_TRUNC('${truncUnit}', date_created)`)
-        .orderByRaw(`DATE_TRUNC('${truncUnit}', date_created) ASC`)
+        .groupByRaw(`DATE_TRUNC('${truncUnit}', date_created AT TIME ZONE 'UTC')`)
+        .orderByRaw(`DATE_TRUNC('${truncUnit}', date_created AT TIME ZONE 'UTC') ASC`)
         .limit(periods) as unknown as Array<Record<string, unknown>>;
 
       const breakdownRows: RevenueBreakdownRow[] = rows.map((row) => ({
