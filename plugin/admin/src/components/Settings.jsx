@@ -9,6 +9,7 @@ export default function Settings() {
   const [connected, setConnected] = useState(initialConnected || false);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+  const [statusType, setStatusType] = useState('info');
 
   const saveSettings = async () => {
     setLoading(true);
@@ -22,8 +23,10 @@ export default function Settings() {
     try {
       const response = await fetch(ajaxUrl, { method: 'POST', body: formData });
       const data = await response.json();
+      setStatusType(data.success ? 'success' : 'error');
       setStatus(data.data?.message || __('Saved.', 'woo-ai-analytics'));
     } catch {
+      setStatusType('error');
       setStatus(__('Failed to save settings.', 'woo-ai-analytics'));
     } finally {
       setLoading(false);
@@ -41,11 +44,40 @@ export default function Settings() {
     try {
       const response = await fetch(ajaxUrl, { method: 'POST', body: formData });
       const data = await response.json();
-      setConnected(data.success);
+      setStatusType(data.success ? 'success' : 'error');
       setStatus(data.data?.message || __('Connection test complete.', 'woo-ai-analytics'));
     } catch {
-      setConnected(false);
+      setStatusType('error');
       setStatus(__('Connection test failed.', 'woo-ai-analytics'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const connectStore = async () => {
+    setLoading(true);
+    setStatus('');
+
+    const formData = new FormData();
+    formData.append('action', 'waa_connect');
+    formData.append('nonce', nonce);
+
+    try {
+      const response = await fetch(ajaxUrl, { method: 'POST', body: formData });
+      const data = await response.json();
+      if (data.success) {
+        setConnected(true);
+        setStatusType('success');
+        setStatus(data.data?.message || __('Connected!', 'woo-ai-analytics'));
+      } else {
+        setConnected(false);
+        setStatusType('error');
+        setStatus(data.data?.message || __('Connection failed.', 'woo-ai-analytics'));
+      }
+    } catch {
+      setConnected(false);
+      setStatusType('error');
+      setStatus(__('Connection failed.', 'woo-ai-analytics'));
     } finally {
       setLoading(false);
     }
@@ -63,8 +95,10 @@ export default function Settings() {
       const response = await fetch(ajaxUrl, { method: 'POST', body: formData });
       const data = await response.json();
       setConnected(false);
+      setStatusType(data.success ? 'success' : 'info');
       setStatus(data.data?.message || __('Disconnected.', 'woo-ai-analytics'));
     } catch {
+      setStatusType('error');
       setStatus(__('Failed to disconnect.', 'woo-ai-analytics'));
     } finally {
       setLoading(false);
@@ -91,8 +125,11 @@ export default function Settings() {
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="https://api.example.com"
-                disabled={loading}
+                disabled={loading || connected}
               />
+              <p className="description">
+                {__('The URL of the Woo AI Analytics backend service.', 'woo-ai-analytics')}
+              </p>
             </td>
           </tr>
           <tr>
@@ -118,24 +155,37 @@ export default function Settings() {
       </table>
 
       <p className="submit">
-        <button
-          type="button"
-          className="button button-primary"
-          onClick={saveSettings}
-          disabled={loading}
-        >
-          {__('Save Settings', 'woo-ai-analytics')}
-        </button>
-        {' '}
         {!connected ? (
-          <button
-            type="button"
-            className="button"
-            onClick={testConnection}
-            disabled={loading || !apiUrl}
-          >
-            {__('Test Connection', 'woo-ai-analytics')}
-          </button>
+          <>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={saveSettings}
+              disabled={loading}
+            >
+              {__('Save Settings', 'woo-ai-analytics')}
+            </button>
+            {' '}
+            <button
+              type="button"
+              className="button"
+              onClick={testConnection}
+              disabled={loading || !apiUrl}
+            >
+              {__('Test Connection', 'woo-ai-analytics')}
+            </button>
+            {' '}
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={connectStore}
+              disabled={loading || !apiUrl}
+            >
+              {loading
+                ? __('Connecting...', 'woo-ai-analytics')
+                : __('Connect Store', 'woo-ai-analytics')}
+            </button>
+          </>
         ) : (
           <button
             type="button"
@@ -149,7 +199,7 @@ export default function Settings() {
       </p>
 
       {status && (
-        <div className="notice notice-info inline">
+        <div className={`notice notice-${statusType} inline`}>
           <p>{status}</p>
         </div>
       )}

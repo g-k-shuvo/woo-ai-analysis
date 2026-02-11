@@ -70,6 +70,7 @@ function waa_activate(): void {
 
 	add_option( 'waa_api_url', '' );
 	add_option( 'waa_store_api_key', '' );
+	add_option( 'waa_store_id', '' );
 	add_option( 'waa_connected', false );
 	add_option( 'waa_version', WAA_VERSION );
 }

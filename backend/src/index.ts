@@ -4,7 +4,10 @@ import { Redis as IORedis } from 'ioredis';
 import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { healthRoutes } from './routes/health.js';
+import { storeRoutes } from './routes/stores.js';
 import { registerErrorHandler } from './middleware/errorHandler.js';
+import { registerAuthMiddleware } from './middleware/auth.js';
+import { createStoreService } from './services/storeService.js';
 
 const startTime = Date.now();
 
@@ -45,9 +48,19 @@ fastify.addHook('onResponse', async (request, reply) => {
 // Error handler
 registerErrorHandler(fastify);
 
+// Auth middleware
+registerAuthMiddleware(fastify, { db });
+
+// Services
+const storeService = createStoreService({ db });
+
 // Routes
 await fastify.register(
   async (instance) => healthRoutes(instance, { db, redis, startTime }),
+);
+
+await fastify.register(
+  async (instance) => storeRoutes(instance, { storeService }),
 );
 
 // Graceful shutdown

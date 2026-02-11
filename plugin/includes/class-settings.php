@@ -41,6 +41,7 @@ final class Settings {
 	private function __construct() {
 		add_action( 'wp_ajax_waa_save_settings', array( $this, 'handle_save_settings' ) );
 		add_action( 'wp_ajax_waa_test_connection', array( $this, 'handle_test_connection' ) );
+		add_action( 'wp_ajax_waa_connect', array( $this, 'handle_connect' ) );
 		add_action( 'wp_ajax_waa_disconnect', array( $this, 'handle_disconnect' ) );
 	}
 
@@ -126,7 +127,157 @@ final class Settings {
 	}
 
 	/**
+	 * Connect store to SaaS backend AJAX handler.
+	 *
+	 * Generates a 64-char API key, sends it with store URL to the backend,
+	 * and stores the raw key locally for future authenticated requests.
+	 */
+	public function handle_connect(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+		}
+
+		$api_url = get_option( 'waa_api_url', '' );
+
+		if ( empty( $api_url ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Please save an API URL first.', 'woo-ai-analytics' ) )
+			);
+		}
+
+		// Generate a cryptographically secure 64-character API key.
+		$api_key    = wp_generate_password( 64, false );
+		$store_url  = site_url();
+		$wc_version = defined( 'WC_VERSION' ) ? WC_VERSION : 'unknown';
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/stores/connect',
+			array(
+				'timeout' => 15,
+				'headers' => array( 'Content-Type' => 'application/json' ),
+				'body'    => wp_json_encode(
+					array(
+						'storeUrl'  => $store_url,
+						'apiKey'    => $api_key,
+						'wcVersion' => $wc_version,
+					)
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			wp_send_json_error(
+				array( 'message' => $response->get_error_message() )
+			);
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 201 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Connection failed.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = $body['error']['message'];
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+		}
+
+		// Encrypt and store the API key.
+		update_option( 'waa_store_api_key', self::encrypt_api_key( $api_key ) );
+		update_option( 'waa_store_id', sanitize_text_field( $body['data']['storeId'] ?? '' ) );
+		update_option( 'waa_connected', true );
+
+		wp_send_json_success(
+			array(
+				'message' => __( 'Connected successfully!', 'woo-ai-analytics' ),
+				'storeId' => $body['data']['storeId'] ?? '',
+			)
+		);
+	}
+
+	/**
+	 * Build a Bearer token for SaaS backend requests.
+	 *
+	 * Format: base64(storeUrl:apiKey)
+	 *
+	 * @return string The Bearer token value, or empty string if not connected.
+	 */
+	public static function get_auth_token(): string {
+		$encrypted = get_option( 'waa_store_api_key', '' );
+		$store_url = site_url();
+
+		if ( empty( $encrypted ) ) {
+			return '';
+		}
+
+		$api_key = self::decrypt_api_key( $encrypted );
+		if ( empty( $api_key ) ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		return base64_encode( $store_url . ':' . $api_key );
+	}
+
+	/**
+	 * Encrypt an API key for safe storage in wp_options.
+	 *
+	 * @param string $plain_key The plaintext API key.
+	 * @return string The encrypted value (base64-encoded).
+	 */
+	private static function encrypt_api_key( string $plain_key ): string {
+		$key    = self::get_encryption_key();
+		$iv     = openssl_random_pseudo_bytes( 16 );
+		$cipher = openssl_encrypt( $plain_key, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		if ( false === $cipher ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		return base64_encode( $iv . $cipher );
+	}
+
+	/**
+	 * Decrypt an API key retrieved from wp_options.
+	 *
+	 * @param string $encrypted The encrypted value (base64-encoded).
+	 * @return string The plaintext API key, or empty string on failure.
+	 */
+	private static function decrypt_api_key( string $encrypted ): string {
+		$key = self::get_encryption_key();
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+		$raw = base64_decode( $encrypted, true );
+
+		if ( false === $raw || strlen( $raw ) < 17 ) {
+			return '';
+		}
+
+		$iv     = substr( $raw, 0, 16 );
+		$cipher = substr( $raw, 16 );
+		$plain  = openssl_decrypt( $cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv );
+
+		return ( false === $plain ) ? '' : $plain;
+	}
+
+	/**
+	 * Derive a 32-byte encryption key from WordPress auth salt.
+	 *
+	 * @return string A 32-byte binary key.
+	 */
+	private static function get_encryption_key(): string {
+		return hash( 'sha256', wp_salt( 'auth' ), true );
+	}
+
+	/**
 	 * Disconnect AJAX handler.
+	 *
+	 * Calls the SaaS backend to delete all store data, then cleans up local options.
 	 */
 	public function handle_disconnect(): void {
 		check_ajax_referer( 'waa_nonce', 'nonce' );
@@ -138,8 +289,27 @@ final class Settings {
 			);
 		}
 
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = self::get_auth_token();
+
+		// Attempt to notify the backend (best-effort).
+		if ( ! empty( $api_url ) && ! empty( $auth_token ) ) {
+			wp_remote_request(
+				trailingslashit( $api_url ) . 'api/stores/disconnect',
+				array(
+					'method'  => 'DELETE',
+					'timeout' => 10,
+					'headers' => array(
+						'Authorization' => 'Bearer ' . $auth_token,
+					),
+				)
+			);
+		}
+
+		// Clean up local state regardless of backend response.
 		update_option( 'waa_connected', false );
 		delete_option( 'waa_store_api_key' );
+		delete_option( 'waa_store_id' );
 
 		wp_send_json_success(
 			array( 'message' => __( 'Disconnected.', 'woo-ai-analytics' ) )

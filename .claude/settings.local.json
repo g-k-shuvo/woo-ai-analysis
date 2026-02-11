@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(dir:*)",
+      "Bash(bash scripts/dev-loop.sh:*)",
+      "Bash(npm test:*)",
+      "Bash(docker-compose config:*)",
+      "Bash(gh auth status:*)"
+    ]
+  }
+}
