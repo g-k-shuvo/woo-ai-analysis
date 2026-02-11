@@ -85,7 +85,7 @@ woo-ai-analytics/
 │   │       ├── productQueries.ts    # Product query service (top sellers, category performance, stock) [implemented]
 │   │       ├── customerQueries.ts  # Customer query service (new vs returning, top spenders, CLV) [implemented]
 │   │       ├── orderQueries.ts     # Order query service (count, AOV, status breakdown, recent) [implemented]
-│   │       └── chartSpec.ts          # AI → Chart.js config converter (planned)
+│   │       └── chartSpec.ts          # AI → Chart.js config converter (ChartSpec + rows → ChartConfiguration) [implemented]
 │   ├── charts/
 │   │   ├── renderer.ts               # Chart.js server-side rendering
 │   │   └── specs/                    # Default chart configurations
@@ -108,7 +108,8 @@ woo-ai-analytics/
 │   │   │   │   ├── revenueQueries.test.ts # Revenue query service unit tests [implemented]
 │   │   │   │   ├── productQueries.test.ts # Product query service unit tests [implemented]
 │   │   │   │   ├── customerQueries.test.ts # Customer query service unit tests [implemented]
-│   │   │   │   └── orderQueries.test.ts  # Order query service unit tests [implemented]
+│   │   │   │   ├── orderQueries.test.ts  # Order query service unit tests [implemented]
+│   │   │   │   └── chartSpec.test.ts    # Chart spec converter unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   └── ...                        # Other unit tests
@@ -120,6 +121,7 @@ woo-ai-analytics/
 │   │   │   ├── productQueries.test.ts    # Product query integration tests [implemented]
 │   │   │   ├── customerQueries.test.ts  # Customer query integration tests [implemented]
 │   │   │   ├── orderQueries.test.ts     # Order query integration tests [implemented]
+│   │   │   ├── chartSpec.test.ts       # Chart spec converter integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev

@@ -36,3 +36,37 @@ export interface OpenAIResponse {
   explanation: string;
   chartSpec: ChartSpec | null;
 }
+
+export interface ChartConfiguration {
+  type: 'bar' | 'line' | 'pie' | 'doughnut';
+  data: {
+    labels: string[];
+    datasets: Array<{
+      label: string;
+      data: number[];
+      backgroundColor: string[];
+      borderColor?: string[];
+      borderWidth?: number;
+    }>;
+  };
+  options: {
+    responsive: boolean;
+    plugins: {
+      title: { display: boolean; text: string };
+      legend?: { display: boolean; position: string };
+    };
+    scales?: {
+      x: { title: { display: boolean; text: string } };
+      y: { title: { display: boolean; text: string } };
+    };
+  };
+}
+
+export interface TableResult {
+  type: 'table';
+  title: string;
+  headers: string[];
+  rows: unknown[][];
+}
+
+export type ChartSpecResult = ChartConfiguration | TableResult;
