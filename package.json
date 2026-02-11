@@ -1,0 +1,20 @@
+{
+  "name": "woo-ai-analytics",
+  "version": "1.0.0",
+  "description": "WooCommerce AI-Powered Conversational Analytics",
+  "private": true,
+  "scripts": {
+    "build:backend": "cd backend && npm run build",
+    "build:plugin": "cd plugin && npm run build",
+    "build:all": "npm run build:backend && npm run build:plugin",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:plugin": "cd plugin && npm run lint",
+    "lint:all": "npm run lint:backend && npm run lint:plugin",
+    "test:backend": "cd backend && npm test",
+    "test:all": "npm run test:backend",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:plugin": "cd plugin && npm run start",
+    "docker:up": "cd backend && docker-compose up -d",
+    "docker:down": "cd backend && docker-compose down"
+  }
+}

@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+secrets/
+
+# Build outputs
+plugin/admin/build/
+plugin/assets/js/
+plugin/assets/css/
+backend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+backend/pgdata/
+backend/redisdata/
+
+# Test output
+coverage/
+.nyc_output/
+
+# WordPress
+plugin/*.zip
+
+# Logs
+*.log
+npm-debug.log*

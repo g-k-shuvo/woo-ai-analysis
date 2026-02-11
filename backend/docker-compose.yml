@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: woo-ai-postgres
+    environment:
+      POSTGRES_DB: woo_ai_analytics
+      POSTGRES_USER: woo_ai
+      POSTGRES_PASSWORD: woo_ai_pass
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init-readonly-user.sql:/docker-entrypoint-initdb.d/01-readonly-user.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U woo_ai -d woo_ai_analytics']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: woo-ai-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
