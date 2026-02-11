@@ -62,7 +62,7 @@ woo-ai-analytics/
 │   │   │   └── rateLimit.ts          # Per-store rate limiting (planned)
 │   │   ├── services/
 │   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
-│   │   │   ├── syncService.ts        # Data upsert logic (planned)
+│   │   │   ├── syncService.ts        # Orders batch upsert (ON CONFLICT merge, sync logs)
 │   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
 │   │   │   └── chartService.ts       # Chart rendering (planned)
 │   │   └── utils/
