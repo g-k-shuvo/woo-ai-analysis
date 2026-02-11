@@ -172,7 +172,9 @@ CREATE TABLE sync_logs (
   started_at      TIMESTAMPTZ DEFAULT NOW(),
   completed_at    TIMESTAMPTZ,
   status          VARCHAR(20) DEFAULT 'running', -- running|completed|failed
-  error_message   TEXT
+  error_message   TEXT,
+  retry_count     INTEGER DEFAULT 0,            -- number of retry attempts
+  next_retry_at   TIMESTAMPTZ                   -- when next retry should be attempted
 );
 ```
 
