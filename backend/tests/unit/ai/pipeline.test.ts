@@ -138,6 +138,31 @@ describe('createAIQueryPipeline', () => {
         pipeline.processQuestion(VALID_STORE_ID, '   '),
       ).rejects.toThrow('Question cannot be empty');
     });
+
+    it('rejects question exceeding max length', async () => {
+      const pipeline = createAIQueryPipeline({
+        openai: mockOpenAI as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        schemaContextService: mockSchemaContext,
+      });
+
+      const longQuestion = 'a'.repeat(2001);
+
+      await expect(
+        pipeline.processQuestion(VALID_STORE_ID, longQuestion),
+      ).rejects.toThrow('Question too long');
+    });
+
+    it('accepts question at max length', async () => {
+      const pipeline = createAIQueryPipeline({
+        openai: mockOpenAI as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        schemaContextService: mockSchemaContext,
+      });
+
+      const maxQuestion = 'a'.repeat(2000);
+
+      const result = await pipeline.processQuestion(VALID_STORE_ID, maxQuestion);
+      expect(result.sql).toContain('SELECT');
+    });
   });
 
   // ── Successful pipeline ──────────────────────────────────
@@ -229,6 +254,34 @@ describe('createAIQueryPipeline', () => {
         temperature: number;
       };
       expect(callArgs.temperature).toBe(0);
+    });
+
+    it('requests JSON response format from OpenAI', async () => {
+      const pipeline = createAIQueryPipeline({
+        openai: mockOpenAI as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        schemaContextService: mockSchemaContext,
+      });
+
+      await pipeline.processQuestion(VALID_STORE_ID, 'What is my revenue?');
+
+      const callArgs = (mockOpenAI.chat.completions.create.mock.calls as unknown[][])[0][0] as {
+        response_format: { type: string };
+      };
+      expect(callArgs.response_format).toEqual({ type: 'json_object' });
+    });
+
+    it('passes timeout option to OpenAI', async () => {
+      const pipeline = createAIQueryPipeline({
+        openai: mockOpenAI as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        schemaContextService: mockSchemaContext,
+      });
+
+      await pipeline.processQuestion(VALID_STORE_ID, 'What is my revenue?');
+
+      const options = (mockOpenAI.chat.completions.create.mock.calls as unknown[][])[0][1] as {
+        timeout: number;
+      };
+      expect(options.timeout).toBe(30_000);
     });
 
     it('sends the question as-is (trimmed) without the store ID', async () => {
@@ -412,7 +465,7 @@ describe('createAIQueryPipeline', () => {
 
   // ── SQL validation in pipeline ─────────────────────────────
   describe('SQL validation integration', () => {
-    it('rejects dangerous SQL from OpenAI', async () => {
+    it('rejects dangerous SQL from OpenAI with generic error', async () => {
       mockOpenAI = createMockOpenAI(
         JSON.stringify({
           sql: "DELETE FROM orders WHERE store_id = $1",
@@ -428,10 +481,10 @@ describe('createAIQueryPipeline', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'Delete all my orders'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
 
-    it('rejects SQL without store_id from OpenAI', async () => {
+    it('rejects SQL without store_id from OpenAI with generic error', async () => {
       mockOpenAI = createMockOpenAI(
         JSON.stringify({
           sql: "SELECT COUNT(*) FROM orders LIMIT 1",
@@ -447,7 +500,7 @@ describe('createAIQueryPipeline', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'How many orders?'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
 
     it('appends LIMIT when OpenAI omits it', async () => {
@@ -536,7 +589,7 @@ describe('createAIQueryPipeline', () => {
 
   // ── Schema context errors ──────────────────────────────────
   describe('schema context errors', () => {
-    it('propagates schema context fetch errors', async () => {
+    it('wraps unexpected schema context errors as AIError', async () => {
       mockSchemaContext.getStoreContext.mockRejectedValue(
         new Error('Database connection failed'),
       );
@@ -548,7 +601,27 @@ describe('createAIQueryPipeline', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'What is my revenue?'),
-      ).rejects.toThrow();
+      ).rejects.toThrow('Pipeline failed unexpectedly');
+    });
+  });
+
+  // ── Code fence handling ──────────────────────────────────
+  describe('code fence handling', () => {
+    it('handles sql language identifier in code fences', async () => {
+      const content = '```sql\n' + makeValidOpenAIResponse() + '\n```';
+      mockOpenAI = createMockOpenAI(content);
+
+      const pipeline = createAIQueryPipeline({
+        openai: mockOpenAI as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+        schemaContextService: mockSchemaContext,
+      });
+
+      const result = await pipeline.processQuestion(
+        VALID_STORE_ID,
+        'What is my revenue?',
+      );
+
+      expect(result.sql).toContain('SELECT');
     });
   });
 });

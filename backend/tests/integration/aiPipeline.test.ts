@@ -163,7 +163,7 @@ describe('AI Pipeline Integration', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'Drop all tables'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
 
     it('rejects DELETE injected by OpenAI', async () => {
@@ -182,7 +182,7 @@ describe('AI Pipeline Integration', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'Delete all orders'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
 
     it('rejects UNION injection from OpenAI', async () => {
@@ -201,7 +201,7 @@ describe('AI Pipeline Integration', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'Show me system tables'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
 
     it('rejects SQL without store_id from OpenAI', async () => {
@@ -220,7 +220,7 @@ describe('AI Pipeline Integration', () => {
 
       await expect(
         pipeline.processQuestion(VALID_STORE_ID, 'How many orders total?'),
-      ).rejects.toThrow('AI generated invalid SQL');
+      ).rejects.toThrow('Unable to process this question');
     });
   });
 
