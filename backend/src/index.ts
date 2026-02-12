@@ -26,7 +26,9 @@ import { createQueryExecutor } from './ai/queryExecutor.js';
 import { createRateLimiter } from './middleware/rateLimiter.js';
 import { landingRoutes } from './routes/landing.js';
 import { dashboardChartsRoutes } from './routes/dashboards/charts.js';
+import { dashboardLayoutRoutes } from './routes/dashboards/layout.js';
 import { createSavedChartsService } from './services/savedChartsService.js';
+import { createDashboardLayoutService } from './services/dashboardLayoutService.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -88,6 +90,7 @@ const chatService = createChatService({ aiPipeline, queryExecutor });
 
 // Dashboard services
 const savedChartsService = createSavedChartsService({ db });
+const dashboardLayoutService = createDashboardLayoutService({ db });
 
 // Rate limiter
 const rateLimiter = createRateLimiter({
@@ -145,6 +148,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => dashboardChartsRoutes(instance, { savedChartsService }),
+);
+
+await fastify.register(
+  async (instance) => dashboardLayoutRoutes(instance, { dashboardLayoutService }),
 );
 
 // Graceful shutdown

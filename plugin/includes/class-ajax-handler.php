@@ -46,6 +46,7 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_save_chart', array( $this, 'handle_save_chart' ) );
 		add_action( 'wp_ajax_waa_list_charts', array( $this, 'handle_list_charts' ) );
 		add_action( 'wp_ajax_waa_delete_chart', array( $this, 'handle_delete_chart' ) );
+		add_action( 'wp_ajax_waa_update_grid_layout', array( $this, 'handle_update_grid_layout' ) );
 	}
 
 	/**
@@ -433,6 +434,106 @@ final class Ajax_Handler {
 	}
 
 	/**
+	 * Update grid layout AJAX handler.
+	 *
+	 * Proxies to PUT /api/dashboards/grid-layout.
+	 */
+	public function handle_update_grid_layout(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$items_raw = isset( $_POST['items'] )
+			? wp_unslash( $_POST['items'] )
+			: '';
+
+		if ( empty( $items_raw ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Layout items are required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$items = json_decode( $items_raw, true );
+		if ( ! is_array( $items ) || empty( $items ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid layout data.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		// Sanitize each layout item.
+		$sanitized_items = array();
+		foreach ( $items as $item ) {
+			if ( ! is_array( $item ) || empty( $item['id'] ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Each item must have a valid id.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$sanitized_items[] = array(
+				'id'    => sanitize_text_field( $item['id'] ),
+				'gridX' => isset( $item['gridX'] ) ? absint( $item['gridX'] ) : 0,
+				'gridY' => isset( $item['gridY'] ) ? absint( $item['gridY'] ) : 0,
+				'gridW' => isset( $item['gridW'] ) ? absint( $item['gridW'] ) : 6,
+				'gridH' => isset( $item['gridH'] ) ? absint( $item['gridH'] ) : 4,
+			);
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/dashboards/grid-layout',
+			array(
+				'method'  => 'PUT',
+				'timeout' => 15,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( array( 'items' => $sanitized_items ) ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Grid Layout Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to update layout.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( array( 'updated' => true ) );
+	}
+
+	/**
 	 * Sanitize a single saved chart response from the backend.
 	 *
 	 * @param mixed $data Raw chart data.
@@ -448,6 +549,10 @@ final class Ajax_Handler {
 			'title'         => isset( $data['title'] ) ? sanitize_text_field( $data['title'] ) : '',
 			'queryText'     => isset( $data['queryText'] ) ? sanitize_text_field( $data['queryText'] ) : '',
 			'positionIndex' => isset( $data['positionIndex'] ) ? absint( $data['positionIndex'] ) : 0,
+			'gridX'         => isset( $data['gridX'] ) ? absint( $data['gridX'] ) : 0,
+			'gridY'         => isset( $data['gridY'] ) ? absint( $data['gridY'] ) : 0,
+			'gridW'         => isset( $data['gridW'] ) ? absint( $data['gridW'] ) : 6,
+			'gridH'         => isset( $data['gridH'] ) ? absint( $data['gridH'] ) : 4,
 			'createdAt'     => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
 			'updatedAt'     => isset( $data['updatedAt'] ) ? sanitize_text_field( $data['updatedAt'] ) : '',
 		);
