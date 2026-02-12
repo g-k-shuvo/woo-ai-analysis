@@ -198,6 +198,33 @@ describe('GET /api/stores/onboarding-status', () => {
     expect(body.data.recordCounts.customers).toBe(5);
   });
 
+  it('returns hasSyncedData true when only categories are synced', async () => {
+    const mockService = createMockStoreService();
+    const mockDb = createMockDb({
+      orders: 0,
+      products: 0,
+      customers: 0,
+      categories: 4,
+    });
+
+    app = createApp('store-cat-only');
+    await app.register(async (instance) =>
+      storeRoutes(instance, { storeService: mockService as any, db: mockDb as any }), // eslint-disable-line @typescript-eslint/no-explicit-any
+    );
+    await app.ready();
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/stores/onboarding-status',
+    });
+    const body = JSON.parse(response.body);
+
+    expect(response.statusCode).toBe(200);
+    expect(body.data.hasSyncedData).toBe(true);
+    expect(body.data.recordCounts.categories).toBe(4);
+    expect(body.data.recordCounts.orders).toBe(0);
+  });
+
   it('queries with correct store_id for tenant isolation', async () => {
     const mockService = createMockStoreService();
 

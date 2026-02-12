@@ -4,7 +4,11 @@ import { __ } from '@wordpress/i18n';
 const STEPS = [ 'welcome', 'connect', 'sync', 'ask' ];
 
 export default function useOnboarding() {
-	const { ajaxUrl, nonce, connected: initialConnected } = window.waaData || {};
+	const {
+		ajaxUrl,
+		nonce,
+		connected: initialConnected,
+	} = window.waaData || {};
 
 	const [ currentStep, setCurrentStep ] = useState( 0 );
 	const [ connected, setConnected ] = useState( initialConnected || false );

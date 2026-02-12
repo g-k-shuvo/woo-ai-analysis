@@ -1,7 +1,7 @@
 # Feature: Onboarding Wizard
 
 **Slug:** onboarding-wizard
-**Status:** In Progress
+**Status:** In Review
 **Owner:** Plugin + Backend
 **Created:** 2026-02-12
 **Last updated:** 2026-02-12
@@ -149,11 +149,11 @@ Step 1: Welcome → Step 2: Connect → Step 3: Sync → Step 4: Ask
 - Backward compatible: wizard only shows for `onboardingComplete = false`
 
 ## 11. Checklist
-- [ ] Plan reviewed
-- [ ] Feature spec approved
-- [ ] Tests added/updated
+- [x] Plan reviewed
+- [x] Feature spec approved
+- [x] Tests added/updated
 - [ ] Lint/test/build pass
-- [ ] Docs updated (docs/ai/, agent_docs/)
-- [ ] PR raised
+- [x] Docs updated (docs/ai/, agent_docs/)
+- [x] PR raised
 - [ ] PR reviewed and approved
 - [ ] Merged

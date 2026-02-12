@@ -54,6 +54,23 @@ function createMockDb(counts: { orders: number; products: number; customers: num
   return db as unknown;
 }
 
+function createApp(storeId: string) {
+  const app = Fastify();
+  registerErrorHandler(app);
+
+  app.decorateRequest('store', undefined);
+  app.addHook('onRequest', async (request) => {
+    request.store = {
+      id: storeId,
+      store_url: 'https://myshop.com',
+      plan: 'free',
+      is_active: true,
+    };
+  });
+
+  return app;
+}
+
 describe('Onboarding Status Integration', () => {
   let app: FastifyInstance;
 
@@ -71,19 +88,7 @@ describe('Onboarding Status Integration', () => {
       categories: 8,
     });
 
-    app = Fastify();
-    registerErrorHandler(app);
-
-    app.decorateRequest('store', undefined);
-    app.addHook('onRequest', async (request) => {
-      request.store = {
-        id: 'store-integration',
-        store_url: 'https://myshop.com',
-        plan: 'free',
-        is_active: true,
-      };
-    });
-
+    app = createApp('store-integration');
     await app.register(async (instance) =>
       storeRoutes(instance, { storeService: mockService as any, db: mockDb as any }), // eslint-disable-line @typescript-eslint/no-explicit-any
     );
@@ -120,19 +125,7 @@ describe('Onboarding Status Integration', () => {
       categories: 0,
     });
 
-    app = Fastify();
-    registerErrorHandler(app);
-
-    app.decorateRequest('store', undefined);
-    app.addHook('onRequest', async (request) => {
-      request.store = {
-        id: 'store-empty',
-        store_url: 'https://emptyshop.com',
-        plan: 'free',
-        is_active: true,
-      };
-    });
-
+    app = createApp('store-empty');
     await app.register(async (instance) =>
       storeRoutes(instance, { storeService: mockService as any, db: mockDb as any }), // eslint-disable-line @typescript-eslint/no-explicit-any
     );
@@ -159,19 +152,7 @@ describe('Onboarding Status Integration', () => {
       categories: 3,
     });
 
-    app = Fastify();
-    registerErrorHandler(app);
-
-    app.decorateRequest('store', undefined);
-    app.addHook('onRequest', async (request) => {
-      request.store = {
-        id: 'store-partial',
-        store_url: 'https://partialshop.com',
-        plan: 'free',
-        is_active: true,
-      };
-    });
-
+    app = createApp('store-partial');
     await app.register(async (instance) =>
       storeRoutes(instance, { storeService: mockService as any, db: mockDb as any }), // eslint-disable-line @typescript-eslint/no-explicit-any
     );
@@ -200,19 +181,7 @@ describe('Onboarding Status Integration', () => {
       categories: 5,
     });
 
-    app = Fastify();
-    registerErrorHandler(app);
-
-    app.decorateRequest('store', undefined);
-    app.addHook('onRequest', async (request) => {
-      request.store = {
-        id: 'store-coexist',
-        store_url: 'https://myshop.com',
-        plan: 'free',
-        is_active: true,
-      };
-    });
-
+    app = createApp('store-coexist');
     await app.register(async (instance) =>
       storeRoutes(instance, { storeService: mockService as any, db: mockDb as any }), // eslint-disable-line @typescript-eslint/no-explicit-any
     );

@@ -11,13 +11,25 @@ const SAMPLE_QUESTION = __(
 
 function StepIndicator( { currentStep, totalSteps } ) {
 	return (
-		<div className="waa-onboarding__steps" role="progressbar" aria-valuenow={ currentStep + 1 } aria-valuemin={ 1 } aria-valuemax={ totalSteps }>
+		<div
+			className="waa-onboarding__steps"
+			role="progressbar"
+			aria-valuenow={ currentStep + 1 }
+			aria-valuemin={ 1 }
+			aria-valuemax={ totalSteps }
+		>
 			{ Array.from( { length: totalSteps }, ( _, i ) => (
 				<span
 					key={ i }
 					className={ `waa-onboarding__step-dot${
-						i === currentStep ? ' waa-onboarding__step-dot--active' : ''
-					}${ i < currentStep ? ' waa-onboarding__step-dot--completed' : '' }` }
+						i === currentStep
+							? ' waa-onboarding__step-dot--active'
+							: ''
+					}${
+						i < currentStep
+							? ' waa-onboarding__step-dot--completed'
+							: ''
+					}` }
 				/>
 			) ) }
 		</div>
@@ -40,9 +52,24 @@ function WelcomeStep( { onNext } ) {
 				) }
 			</p>
 			<ul className="waa-onboarding__features">
-				<li>{ __( 'Ask questions about revenue, orders, products, and customers', 'woo-ai-analytics' ) }</li>
-				<li>{ __( 'Get visual charts and data tables', 'woo-ai-analytics' ) }</li>
-				<li>{ __( 'All data stays secure and isolated', 'woo-ai-analytics' ) }</li>
+				<li>
+					{ __(
+						'Ask questions about revenue, orders, products, and customers',
+						'woo-ai-analytics'
+					) }
+				</li>
+				<li>
+					{ __(
+						'Get visual charts and data tables',
+						'woo-ai-analytics'
+					) }
+				</li>
+				<li>
+					{ __(
+						'All data stays secure and isolated',
+						'woo-ai-analytics'
+					) }
+				</li>
 			</ul>
 			<button
 				type="button"
@@ -60,24 +87,15 @@ WelcomeStep.propTypes = {
 };
 
 function ConnectStep( { onConnected, connected, onNext } ) {
-	const {
-		ajaxUrl,
-		nonce,
-		apiUrl: initialApiUrl,
-	} = window.waaData || {};
+	const { ajaxUrl, nonce, apiUrl: initialApiUrl } = window.waaData || {};
 
 	const [ apiUrl, setApiUrl ] = useState( initialApiUrl || '' );
 	const [ loading, setLoading ] = useState( false );
 	const [ status, setStatus ] = useState( '' );
 	const [ statusType, setStatusType ] = useState( 'info' );
 
-	// If already connected, allow advancing directly.
-	useEffect( () => {
-		if ( connected ) {
-			setStatus( __( 'Already connected!', 'woo-ai-analytics' ) );
-			setStatusType( 'success' );
-		}
-	}, [ connected ] );
+	// No status message needed when already connected — the connected
+	// branch below renders its own "Store is connected." notice.
 
 	const saveAndConnect = async () => {
 		setLoading( true );
@@ -106,9 +124,7 @@ function ConnectStep( { onConnected, connected, onNext } ) {
 			}
 		} catch {
 			setStatusType( 'error' );
-			setStatus(
-				__( 'Failed to save settings.', 'woo-ai-analytics' )
-			);
+			setStatus( __( 'Failed to save settings.', 'woo-ai-analytics' ) );
 			setLoading( false );
 			return;
 		}
@@ -127,8 +143,7 @@ function ConnectStep( { onConnected, connected, onNext } ) {
 			if ( data.success ) {
 				setStatusType( 'success' );
 				setStatus(
-					data.data?.message ||
-						__( 'Connected!', 'woo-ai-analytics' )
+					data.data?.message || __( 'Connected!', 'woo-ai-analytics' )
 				);
 				onConnected();
 			} else {
@@ -140,9 +155,7 @@ function ConnectStep( { onConnected, connected, onNext } ) {
 			}
 		} catch {
 			setStatusType( 'error' );
-			setStatus(
-				__( 'Connection failed.', 'woo-ai-analytics' )
-			);
+			setStatus( __( 'Connection failed.', 'woo-ai-analytics' ) );
 		} finally {
 			setLoading( false );
 		}
@@ -188,7 +201,9 @@ function ConnectStep( { onConnected, connected, onNext } ) {
 			) : (
 				<>
 					<div className="notice notice-success inline">
-						<p>{ __( 'Store is connected.', 'woo-ai-analytics' ) }</p>
+						<p>
+							{ __( 'Store is connected.', 'woo-ai-analytics' ) }
+						</p>
 					</div>
 					<button
 						type="button"
@@ -201,7 +216,10 @@ function ConnectStep( { onConnected, connected, onNext } ) {
 			) }
 
 			{ status && (
-				<div className={ `notice notice-${ statusType } inline` } style={ { marginTop: 12 } }>
+				<div
+					className={ `notice notice-${ statusType } inline` }
+					style={ { marginTop: 12 } }
+				>
 					<p>{ status }</p>
 				</div>
 			) }
@@ -226,7 +244,9 @@ function SyncStep( { onNext, fetchOnboardingStatus } ) {
 			setSyncData( result );
 			setError( '' );
 		} else {
-			setError( __( 'Failed to check sync status.', 'woo-ai-analytics' ) );
+			setError(
+				__( 'Failed to check sync status.', 'woo-ai-analytics' )
+			);
 		}
 		setLoading( false );
 	}, [ fetchOnboardingStatus ] );
@@ -264,7 +284,9 @@ function SyncStep( { onNext, fetchOnboardingStatus } ) {
 			</p>
 
 			{ loading && (
-				<p>{ __( 'Checking sync status\u2026', 'woo-ai-analytics' ) }</p>
+				<p>
+					{ __( 'Checking sync status\u2026', 'woo-ai-analytics' ) }
+				</p>
 			) }
 
 			{ error && (
@@ -275,7 +297,10 @@ function SyncStep( { onNext, fetchOnboardingStatus } ) {
 
 			{ ! loading && syncData && (
 				<>
-					<table className="widefat fixed striped" style={ { maxWidth: 400 } }>
+					<table
+						className="widefat fixed striped"
+						style={ { maxWidth: 400 } }
+					>
 						<thead>
 							<tr>
 								<th>{ __( 'Entity', 'woo-ai-analytics' ) }</th>
@@ -285,27 +310,57 @@ function SyncStep( { onNext, fetchOnboardingStatus } ) {
 						<tbody>
 							<tr>
 								<td>{ __( 'Orders', 'woo-ai-analytics' ) }</td>
-								<td><strong>{ counts.orders.toLocaleString() }</strong></td>
+								<td>
+									<strong>
+										{ counts.orders.toLocaleString() }
+									</strong>
+								</td>
 							</tr>
 							<tr>
-								<td>{ __( 'Products', 'woo-ai-analytics' ) }</td>
-								<td><strong>{ counts.products.toLocaleString() }</strong></td>
+								<td>
+									{ __( 'Products', 'woo-ai-analytics' ) }
+								</td>
+								<td>
+									<strong>
+										{ counts.products.toLocaleString() }
+									</strong>
+								</td>
 							</tr>
 							<tr>
-								<td>{ __( 'Customers', 'woo-ai-analytics' ) }</td>
-								<td><strong>{ counts.customers.toLocaleString() }</strong></td>
+								<td>
+									{ __( 'Customers', 'woo-ai-analytics' ) }
+								</td>
+								<td>
+									<strong>
+										{ counts.customers.toLocaleString() }
+									</strong>
+								</td>
 							</tr>
 							<tr>
-								<td>{ __( 'Categories', 'woo-ai-analytics' ) }</td>
-								<td><strong>{ counts.categories.toLocaleString() }</strong></td>
+								<td>
+									{ __( 'Categories', 'woo-ai-analytics' ) }
+								</td>
+								<td>
+									<strong>
+										{ counts.categories.toLocaleString() }
+									</strong>
+								</td>
 							</tr>
 						</tbody>
 					</table>
 
 					{ hasSyncedData ? (
 						<div style={ { marginTop: 16 } }>
-							<div className="notice notice-success inline" style={ { marginBottom: 12 } }>
-								<p>{ __( 'Data synced successfully!', 'woo-ai-analytics' ) }</p>
+							<div
+								className="notice notice-success inline"
+								style={ { marginBottom: 12 } }
+							>
+								<p>
+									{ __(
+										'Data synced successfully!',
+										'woo-ai-analytics'
+									) }
+								</p>
 							</div>
 							<button
 								type="button"
@@ -319,7 +374,11 @@ function SyncStep( { onNext, fetchOnboardingStatus } ) {
 						<div style={ { marginTop: 16 } }>
 							<span
 								className="spinner is-active"
-								style={ { float: 'none', margin: 0, marginRight: 8 } }
+								style={ {
+									float: 'none',
+									margin: 0,
+									marginRight: 8,
+								} }
 							/>
 							<span>
 								{ __(
@@ -351,15 +410,14 @@ function AskStep( { onComplete } ) {
 		}
 	};
 
-	const lastMessage = messages.length > 0 ? messages[ messages.length - 1 ] : null;
+	const lastMessage =
+		messages.length > 0 ? messages[ messages.length - 1 ] : null;
 	const hasAnswer =
 		lastMessage && lastMessage.role === 'assistant' && ! loading;
 
 	return (
 		<div className="waa-onboarding__content">
-			<h2>
-				{ __( 'Ask Your First Question', 'woo-ai-analytics' ) }
-			</h2>
+			<h2>{ __( 'Ask Your First Question', 'woo-ai-analytics' ) }</h2>
 			<p>
 				{ __(
 					'Try asking a question about your store data. Click the button below to see AI Analytics in action!',
@@ -374,8 +432,7 @@ function AskStep( { onComplete } ) {
 					onClick={ handleAsk }
 					disabled={ loading }
 				>
-					{ __( 'Ask:', 'woo-ai-analytics' ) }{ ' ' }
-					{ SAMPLE_QUESTION }
+					{ __( 'Ask:', 'woo-ai-analytics' ) } { SAMPLE_QUESTION }
 				</button>
 			) }
 
@@ -393,9 +450,14 @@ function AskStep( { onComplete } ) {
 
 			{ hasAnswer && (
 				<div style={ { marginTop: 12 } }>
-					<div className="notice notice-success inline" style={ { marginBottom: 12 } }>
+					<div
+						className="notice notice-success inline"
+						style={ { marginBottom: 12 } }
+					>
 						<p>
-							<strong>{ __( 'Answer:', 'woo-ai-analytics' ) }</strong>{ ' ' }
+							<strong>
+								{ __( 'Answer:', 'woo-ai-analytics' ) }
+							</strong>{ ' ' }
 							{ lastMessage.data?.answer || lastMessage.content }
 						</p>
 					</div>
@@ -404,17 +466,17 @@ function AskStep( { onComplete } ) {
 						className="button button-primary button-hero"
 						onClick={ onComplete }
 					>
-						{ __(
-							'Finish Setup',
-							'woo-ai-analytics'
-						) }
+						{ __( 'Finish Setup', 'woo-ai-analytics' ) }
 					</button>
 				</div>
 			) }
 
 			{ asked && lastMessage?.role === 'error' && (
 				<div style={ { marginTop: 12 } }>
-					<div className="notice notice-warning inline" style={ { marginBottom: 12 } }>
+					<div
+						className="notice notice-warning inline"
+						style={ { marginBottom: 12 } }
+					>
 						<p>
 							{ __(
 								'The AI query encountered an issue, but don\u2019t worry \u2014 you can try again from the chat screen.',

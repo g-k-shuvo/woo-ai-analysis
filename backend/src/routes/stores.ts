@@ -84,7 +84,8 @@ export async function storeRoutes(fastify: FastifyInstance, deps: StoreDeps) {
       categories: parseInt(categoriesCount?.count ?? '0', 10),
     };
 
-    const hasSyncedData = counts.orders > 0 || counts.products > 0 || counts.customers > 0;
+    const hasSyncedData =
+      counts.orders > 0 || counts.products > 0 || counts.customers > 0 || counts.categories > 0;
 
     return reply.status(200).send({
       success: true,
