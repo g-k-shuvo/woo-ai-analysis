@@ -70,6 +70,14 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 |--------|------|-------------|
 | POST | `/api/exports/csv` | Export saved charts as CSV. Body: `{ chartId? }`. Returns text/csv with BOM [implemented] |
 
+### Scheduled Insights
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/scheduled-insights` | Create a scheduled insight. Body: `{ name, frequency, hour, dayOfWeek?, enabled? }` [implemented] |
+| GET | `/api/scheduled-insights` | List all scheduled insights for the store [implemented] |
+| PUT | `/api/scheduled-insights/:id` | Update a scheduled insight. Body: `{ name?, frequency?, hour?, dayOfWeek?, enabled? }` [implemented] |
+| DELETE | `/api/scheduled-insights/:id` | Delete a scheduled insight [implemented] |
+
 ## Plugin-Side Endpoints (WordPress AJAX)
 
 These run inside WordPress via `admin-ajax.php`:
@@ -94,6 +102,10 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_list_reports` | Proxies to GET /api/reports — lists generated reports (nonce required) [implemented] |
 | `waa_download_report` | Proxies to GET /api/reports/:id/download — downloads PDF (nonce required) [implemented] |
 | `waa_export_csv` | Proxies to POST /api/exports/csv — exports chart data as CSV (nonce required) [implemented] |
+| `waa_create_scheduled_insight` | Proxies to POST /api/scheduled-insights — creates scheduled insight (nonce required) [implemented] |
+| `waa_list_scheduled_insights` | Proxies to GET /api/scheduled-insights — lists scheduled insights (nonce required) [implemented] |
+| `waa_update_scheduled_insight` | Proxies to PUT /api/scheduled-insights/:id — updates scheduled insight (nonce required) [implemented] |
+| `waa_delete_scheduled_insight` | Proxies to DELETE /api/scheduled-insights/:id — deletes scheduled insight (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

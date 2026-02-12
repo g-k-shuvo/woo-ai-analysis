@@ -55,6 +55,6 @@
 - [x] **6.2** Custom dashboard with drag-and-drop layout
 - [x] **6.3** PDF report export
 - [x] **6.4** CSV export
-- [ ] **6.5** Scheduled insights (daily/weekly email)
+- [x] **6.5** Scheduled insights (daily/weekly email)
 - [ ] **6.6** Predictive analytics (revenue forecast)
 - [ ] **6.7** Date range comparison (this month vs last month)

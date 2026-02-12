@@ -51,6 +51,10 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_list_reports', array( $this, 'handle_list_reports' ) );
 		add_action( 'wp_ajax_waa_download_report', array( $this, 'handle_download_report' ) );
 		add_action( 'wp_ajax_waa_export_csv', array( $this, 'handle_export_csv' ) );
+		add_action( 'wp_ajax_waa_create_scheduled_insight', array( $this, 'handle_create_scheduled_insight' ) );
+		add_action( 'wp_ajax_waa_list_scheduled_insights', array( $this, 'handle_list_scheduled_insights' ) );
+		add_action( 'wp_ajax_waa_update_scheduled_insight', array( $this, 'handle_update_scheduled_insight' ) );
+		add_action( 'wp_ajax_waa_delete_scheduled_insight', array( $this, 'handle_delete_scheduled_insight' ) );
 	}
 
 	/**
@@ -841,6 +845,394 @@ final class Ajax_Handler {
 				'csvData'  => $csv_base64,
 				'filename' => $filename,
 			)
+		);
+	}
+
+	/**
+	 * Create scheduled insight AJAX handler.
+	 *
+	 * Proxies to POST /api/scheduled-insights.
+	 */
+	public function handle_create_scheduled_insight(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$name = isset( $_POST['name'] )
+			? sanitize_text_field( wp_unslash( $_POST['name'] ) )
+			: '';
+
+		if ( empty( $name ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Name is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$frequency = isset( $_POST['frequency'] )
+			? sanitize_text_field( wp_unslash( $_POST['frequency'] ) )
+			: '';
+
+		if ( ! in_array( $frequency, array( 'daily', 'weekly' ), true ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Frequency must be daily or weekly.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$hour = isset( $_POST['hour'] ) ? absint( $_POST['hour'] ) : 0;
+		if ( $hour > 23 ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Hour must be between 0 and 23.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$payload = array(
+			'name'      => $name,
+			'frequency' => $frequency,
+			'hour'      => $hour,
+		);
+
+		if ( 'weekly' === $frequency && isset( $_POST['dayOfWeek'] ) ) {
+			$day_of_week = absint( $_POST['dayOfWeek'] );
+			if ( $day_of_week > 6 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Day of week must be between 0 and 6.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['dayOfWeek'] = $day_of_week;
+		}
+
+		if ( isset( $_POST['enabled'] ) ) {
+			$payload['enabled'] = filter_var( $_POST['enabled'], FILTER_VALIDATE_BOOLEAN );
+		}
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/scheduled-insights',
+			array(
+				'timeout' => 15,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Create Scheduled Insight Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ( 200 !== $status_code && 201 !== $status_code ) || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to create scheduled insight.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_scheduled_insight_response( $body['data'] ) );
+	}
+
+	/**
+	 * List scheduled insights AJAX handler.
+	 *
+	 * Proxies to GET /api/scheduled-insights.
+	 */
+	public function handle_list_scheduled_insights(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/scheduled-insights',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA List Scheduled Insights Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load scheduled insights.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		$insights = array();
+		if ( is_array( $body['data']['insights'] ?? null ) ) {
+			foreach ( $body['data']['insights'] as $insight ) {
+				$insights[] = self::sanitize_scheduled_insight_response( $insight );
+			}
+		}
+		wp_send_json_success( array( 'insights' => $insights ) );
+	}
+
+	/**
+	 * Update scheduled insight AJAX handler.
+	 *
+	 * Proxies to PUT /api/scheduled-insights/:id.
+	 */
+	public function handle_update_scheduled_insight(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$insight_id = isset( $_POST['insightId'] )
+			? sanitize_text_field( wp_unslash( $_POST['insightId'] ) )
+			: '';
+
+		if ( empty( $insight_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Insight ID is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$payload = array();
+		if ( isset( $_POST['name'] ) ) {
+			$payload['name'] = sanitize_text_field( wp_unslash( $_POST['name'] ) );
+		}
+		if ( isset( $_POST['frequency'] ) ) {
+			$frequency = sanitize_text_field( wp_unslash( $_POST['frequency'] ) );
+			if ( ! in_array( $frequency, array( 'daily', 'weekly' ), true ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Frequency must be daily or weekly.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['frequency'] = $frequency;
+		}
+		if ( isset( $_POST['hour'] ) ) {
+			$hour = absint( $_POST['hour'] );
+			if ( $hour > 23 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Hour must be between 0 and 23.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['hour'] = $hour;
+		}
+		if ( isset( $_POST['dayOfWeek'] ) ) {
+			$day_of_week = absint( $_POST['dayOfWeek'] );
+			if ( $day_of_week > 6 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Day of week must be between 0 and 6.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['dayOfWeek'] = $day_of_week;
+		}
+		if ( isset( $_POST['enabled'] ) ) {
+			$payload['enabled'] = filter_var( $_POST['enabled'], FILTER_VALIDATE_BOOLEAN );
+		}
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/scheduled-insights/' . rawurlencode( $insight_id ),
+			array(
+				'method'  => 'PUT',
+				'timeout' => 15,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Update Scheduled Insight Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to update scheduled insight.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_scheduled_insight_response( $body['data'] ) );
+	}
+
+	/**
+	 * Delete scheduled insight AJAX handler.
+	 *
+	 * Proxies to DELETE /api/scheduled-insights/:id.
+	 */
+	public function handle_delete_scheduled_insight(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$insight_id = isset( $_POST['insightId'] )
+			? sanitize_text_field( wp_unslash( $_POST['insightId'] ) )
+			: '';
+
+		if ( empty( $insight_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Insight ID is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/scheduled-insights/' . rawurlencode( $insight_id ),
+			array(
+				'method'  => 'DELETE',
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Delete Scheduled Insight Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to delete scheduled insight.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Sanitize a scheduled insight response from the backend.
+	 *
+	 * @param mixed $data Raw insight data.
+	 * @return array Sanitized insight data.
+	 */
+	private static function sanitize_scheduled_insight_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		return array(
+			'id'        => isset( $data['id'] ) ? sanitize_text_field( $data['id'] ) : '',
+			'name'      => isset( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '',
+			'frequency' => isset( $data['frequency'] ) ? sanitize_text_field( $data['frequency'] ) : '',
+			'hour'      => isset( $data['hour'] ) ? absint( $data['hour'] ) : 0,
+			'dayOfWeek' => isset( $data['dayOfWeek'] ) ? ( is_null( $data['dayOfWeek'] ) ? null : absint( $data['dayOfWeek'] ) ) : null,
+			'enabled'   => isset( $data['enabled'] ) ? (bool) $data['enabled'] : true,
+			'lastRunAt' => isset( $data['lastRunAt'] ) ? sanitize_text_field( $data['lastRunAt'] ) : null,
+			'nextRunAt' => isset( $data['nextRunAt'] ) ? sanitize_text_field( $data['nextRunAt'] ) : null,
+			'createdAt' => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
+			'updatedAt' => isset( $data['updatedAt'] ) ? sanitize_text_field( $data['updatedAt'] ) : '',
 		);
 	}
 
