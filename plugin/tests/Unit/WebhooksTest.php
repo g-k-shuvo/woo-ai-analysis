@@ -661,15 +661,15 @@ final class WebhooksTest extends TestCase {
 
 	public function test_customer_catches_exception_silently(): void {
 		$this->setup_connected_store();
-		// No customer data registered — WC_Customer constructor will set id = 99 but
-		// since we use overrides lookup, it should get default data with id = 99.
-		// Let's force an exception by making the override throw.
-		WP_Stubs::$overrides['wc_customers'] = array(); // Empty — id won't be found.
-		// The WC_Customer stub will still work with id_or_data = 99, getting default data with id=99.
-		// Since get_id() returns 99 != 0, it proceeds. That's fine for this test.
-		// Let's instead test exception path differently.
+		// Force WC_Customer constructor to throw — simulates invalid customer ID.
+		WP_Stubs::$overrides['wc_customer_throws'] = true;
+
+		WP_Stubs::$calls = array();
 		$this->webhooks->on_customer_created( 99 );
-		$this->assertTrue( true );
+
+		// Should not send any webhook — exception caught silently.
+		$post_calls = WP_Stubs::$calls['wp_remote_post'] ?? array();
+		$this->assertCount( 0, $post_calls );
 	}
 
 	// ─── Category Sync ───────────────────────────────────────────────────────────

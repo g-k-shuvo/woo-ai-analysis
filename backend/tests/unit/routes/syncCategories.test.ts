@@ -112,7 +112,7 @@ describe('POST /api/sync/categories', () => {
       expect(mockSyncService.upsertCategories).toHaveBeenCalledWith(STORE_ID, [category]);
     });
 
-    it('accepts empty categories array', async () => {
+    it('accepts empty categories array and calls upsertCategories with it', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/sync/categories',
@@ -120,6 +120,7 @@ describe('POST /api/sync/categories', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(mockSyncService.upsertCategories).toHaveBeenCalledWith(STORE_ID, []);
     });
   });
 

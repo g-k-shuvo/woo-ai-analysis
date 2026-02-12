@@ -111,7 +111,7 @@ describe('POST /api/sync/customers', () => {
       expect(mockSyncService.upsertCustomers).toHaveBeenCalledWith(STORE_ID, [customer]);
     });
 
-    it('accepts empty customers array', async () => {
+    it('accepts empty customers array and calls upsertCustomers with it', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/sync/customers',
@@ -119,6 +119,7 @@ describe('POST /api/sync/customers', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(mockSyncService.upsertCustomers).toHaveBeenCalledWith(STORE_ID, []);
     });
   });
 

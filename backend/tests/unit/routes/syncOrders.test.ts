@@ -129,7 +129,7 @@ describe('POST /api/sync/orders', () => {
       expect(mockSyncService.upsertOrders).toHaveBeenCalledWith(STORE_ID, orders);
     });
 
-    it('accepts empty orders array', async () => {
+    it('accepts empty orders array and calls upsertOrders with it', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/api/sync/orders',
@@ -137,6 +137,7 @@ describe('POST /api/sync/orders', () => {
       });
 
       expect(response.statusCode).toBe(200);
+      expect(mockSyncService.upsertOrders).toHaveBeenCalledWith(STORE_ID, []);
     });
   });
 

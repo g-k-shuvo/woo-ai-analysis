@@ -498,6 +498,9 @@ function wp_localize_script( string $handle, string $object_name, array $l10n ):
  * Stub: wp_verify_nonce.
  */
 function wp_verify_nonce( string $nonce, string|int $action = -1 ): int|false {
+	if ( isset( WP_Stubs::$overrides['wp_verify_nonce'] ) ) {
+		return WP_Stubs::$overrides['wp_verify_nonce'];
+	}
 	return 1;
 }
 
@@ -615,8 +618,8 @@ class WC_Product {
 	private int $id;
 	private string $name;
 	private string $sku;
-	private float $price;
-	private float $regular_price;
+	private string $price;
+	private string $regular_price;
 	private string $sale_price;
 	private array $category_ids;
 	private ?int $stock_quantity;
@@ -630,9 +633,9 @@ class WC_Product {
 		$this->id             = $data['id'] ?? 0;
 		$this->name           = $data['name'] ?? '';
 		$this->sku            = $data['sku'] ?? '';
-		$this->price          = $data['price'] ?? 0.0;
-		$this->regular_price  = $data['regular_price'] ?? 0.0;
-		$this->sale_price     = $data['sale_price'] ?? '';
+		$this->price          = (string) ( $data['price'] ?? '' );
+		$this->regular_price  = (string) ( $data['regular_price'] ?? '' );
+		$this->sale_price     = (string) ( $data['sale_price'] ?? '' );
 		$this->category_ids   = $data['category_ids'] ?? array();
 		$this->stock_quantity = $data['stock_quantity'] ?? null;
 		$this->stock_status   = $data['stock_status'] ?? 'instock';
@@ -645,8 +648,8 @@ class WC_Product {
 	public function get_id(): int { return $this->id; }
 	public function get_name(): string { return $this->name; }
 	public function get_sku(): string { return $this->sku; }
-	public function get_price(): float { return $this->price; }
-	public function get_regular_price(): float { return $this->regular_price; }
+	public function get_price(): string { return $this->price; }
+	public function get_regular_price(): string { return $this->regular_price; }
 	public function get_sale_price(): string { return $this->sale_price; }
 	public function get_category_ids(): array { return $this->category_ids; }
 	public function get_stock_quantity(): ?int { return $this->stock_quantity; }
@@ -669,6 +672,9 @@ class WC_Customer {
 	private ?WC_DateTime $date_created;
 
 	public function __construct( int|array $id_or_data = 0 ) {
+		if ( isset( WP_Stubs::$overrides['wc_customer_throws'] ) && WP_Stubs::$overrides['wc_customer_throws'] ) {
+			throw new \Exception( 'Invalid customer' );
+		}
 		if ( is_array( $id_or_data ) ) {
 			$data = $id_or_data;
 		} else {

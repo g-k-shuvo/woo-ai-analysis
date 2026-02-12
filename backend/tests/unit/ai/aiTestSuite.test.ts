@@ -868,9 +868,6 @@ describe('AI Test Suite — SQL Validator Direct', () => {
 // ═══════════════════════════════════════════════════════════════
 
 describe('AI Test Suite — Edge Cases', () => {
-  beforeEach(() => {
-    createMockSchemaContextService();
-  });
 
   it('TC-E01: Handles query returning aggregate null (no data)', async () => {
     await runTestCase({
