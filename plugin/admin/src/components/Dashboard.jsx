@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import useDashboard from '../hooks/useDashboard';
 import DashboardGrid from './DashboardGrid';
 import ExportPdfButton from './ExportPdfButton';
+import ExportCsvButton from './ExportCsvButton';
 
 export default function Dashboard( { onNavigateToChat } ) {
 	const {
@@ -67,7 +68,10 @@ export default function Dashboard( { onNavigateToChat } ) {
 					<h1>{ __( 'Dashboard', 'woo-ai-analytics' ) }</h1>
 					<div className="waa-dashboard__actions">
 						{ ! loading && charts.length > 0 && (
-							<ExportPdfButton />
+							<>
+								<ExportCsvButton />
+								<ExportPdfButton />
+							</>
 						) }
 						{ onNavigateToChat && (
 							<button
