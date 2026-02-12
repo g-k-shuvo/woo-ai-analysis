@@ -140,3 +140,9 @@
 		opacity: 1;
 	}
 }
+
+/* Widen assistant messages that contain charts or tables */
+.waa-chat__message--assistant:has(.waa-chart),
+.waa-chat__message--assistant:has(.waa-table) {
+	max-width: 100%;
+}

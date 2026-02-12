@@ -2,6 +2,8 @@ import { useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import useChat from '../hooks/useChat';
 import ChatInput from './ChatInput';
+import ChartRenderer from './ChartRenderer';
+import TableRenderer from './TableRenderer';
 import './ChatWindow.css';
 
 const { connected } = window.waaData || {};
@@ -75,6 +77,20 @@ export default function ChatWindow() {
 							<div className="waa-chat__message-content">
 								{ msg.content }
 							</div>
+							{ msg.role === 'assistant' &&
+								msg.data?.chartConfig &&
+								msg.data.chartConfig.type === 'table' && (
+									<TableRenderer
+										config={ msg.data.chartConfig }
+									/>
+								) }
+							{ msg.role === 'assistant' &&
+								msg.data?.chartConfig &&
+								msg.data.chartConfig.type !== 'table' && (
+									<ChartRenderer
+										config={ msg.data.chartConfig }
+									/>
+								) }
 							{ msg.data?.rowCount !== undefined &&
 								msg.role === 'assistant' && (
 									<div className="waa-chat__message-meta">
