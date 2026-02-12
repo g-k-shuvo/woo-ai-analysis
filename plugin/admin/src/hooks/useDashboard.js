@@ -86,9 +86,57 @@ export default function useDashboard() {
 		[]
 	);
 
+	const updateGridLayout = useCallback(
+		async ( items ) => {
+			if ( ! ajaxUrl || ! nonce || ! items || items.length === 0 ) {
+				return;
+			}
+
+			const formData = new FormData();
+			formData.append( 'action', 'waa_update_grid_layout' );
+			formData.append( 'nonce', nonce );
+			formData.append( 'items', JSON.stringify( items ) );
+
+			try {
+				const response = await fetch( ajaxUrl, {
+					method: 'POST',
+					body: formData,
+				} );
+
+				const result = await response.json();
+
+				if ( ! result.success ) {
+					setError(
+						result.data?.message ||
+							__(
+								'Failed to update layout.',
+								'woo-ai-analytics'
+							)
+					);
+				}
+			} catch {
+				setError(
+					__(
+						'Network error. Please try again.',
+						'woo-ai-analytics'
+					)
+				);
+			}
+		},
+		[]
+	);
+
 	useEffect( () => {
 		fetchCharts();
 	}, [ fetchCharts ] );
 
-	return { charts, loading, error, deleteChart, refresh: fetchCharts };
+	return {
+		charts,
+		setCharts,
+		loading,
+		error,
+		deleteChart,
+		updateGridLayout,
+		refresh: fetchCharts,
+	};
 }

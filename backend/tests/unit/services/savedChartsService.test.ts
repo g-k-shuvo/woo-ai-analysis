@@ -25,6 +25,10 @@ function makeRecord(overrides: Record<string, unknown> = {}) {
     query_text: 'Show revenue by product',
     chart_config: JSON.stringify({ type: 'bar', data: { labels: ['A'], datasets: [] } }),
     position_index: 0,
+    grid_x: 0,
+    grid_y: 0,
+    grid_w: 6,
+    grid_h: 4,
     created_at: '2026-02-12T00:00:00Z',
     updated_at: '2026-02-12T00:00:00Z',
     ...overrides,
@@ -65,6 +69,7 @@ function createMockDb() {
   const db = jest.fn().mockReturnValue(builder);
   (db as unknown as { fn: MockQueryBuilder['fn'] }).fn = builder.fn;
   (db as unknown as { transaction: MockQueryBuilder['transaction'] }).transaction = builder.transaction;
+  (db as unknown as { raw: (expr: string) => string }).raw = (expr: string) => expr;
 
   return { db, builder };
 }
@@ -88,6 +93,7 @@ describe('savedChartsService', () => {
     it('inserts a chart and returns response', async () => {
       builder.first.mockResolvedValueOnce({ count: '0' }); // count
       builder.first.mockResolvedValueOnce({ max_pos: -1 }); // max position
+      builder.first.mockResolvedValueOnce({ max: 0 }); // max grid_y + grid_h
       builder.returning.mockResolvedValue([makeRecord()]);
 
       const service = createSavedChartsService({ db: db as unknown as Parameters<typeof createSavedChartsService>[0]['db'] });
@@ -159,6 +165,7 @@ describe('savedChartsService', () => {
     it('sets position_index to max + 1', async () => {
       builder.first.mockResolvedValueOnce({ count: '3' });
       builder.first.mockResolvedValueOnce({ max_pos: 5 });
+      builder.first.mockResolvedValueOnce({ max: 20 }); // max grid_y + grid_h
       builder.returning.mockResolvedValue([makeRecord({ position_index: 6 })]);
 
       const service = createSavedChartsService({ db: db as unknown as Parameters<typeof createSavedChartsService>[0]['db'] });
@@ -173,6 +180,7 @@ describe('savedChartsService', () => {
     it('trims title whitespace', async () => {
       builder.first.mockResolvedValueOnce({ count: '0' });
       builder.first.mockResolvedValueOnce({ max_pos: -1 });
+      builder.first.mockResolvedValueOnce({ max: 0 }); // max grid_y + grid_h
       builder.returning.mockResolvedValue([makeRecord()]);
 
       const service = createSavedChartsService({ db: db as unknown as Parameters<typeof createSavedChartsService>[0]['db'] });
@@ -189,6 +197,7 @@ describe('savedChartsService', () => {
     it('sets null queryText when not provided', async () => {
       builder.first.mockResolvedValueOnce({ count: '0' });
       builder.first.mockResolvedValueOnce({ max_pos: -1 });
+      builder.first.mockResolvedValueOnce({ max: 0 }); // max grid_y + grid_h
       builder.returning.mockResolvedValue([makeRecord({ query_text: null })]);
 
       const service = createSavedChartsService({ db: db as unknown as Parameters<typeof createSavedChartsService>[0]['db'] });
@@ -205,6 +214,7 @@ describe('savedChartsService', () => {
     it('stringifies chartConfig for storage', async () => {
       builder.first.mockResolvedValueOnce({ count: '0' });
       builder.first.mockResolvedValueOnce({ max_pos: -1 });
+      builder.first.mockResolvedValueOnce({ max: 0 }); // max grid_y + grid_h
       builder.returning.mockResolvedValue([makeRecord()]);
 
       const config = { type: 'bar', data: { labels: ['X'] } };

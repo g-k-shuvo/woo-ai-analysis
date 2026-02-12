@@ -13,6 +13,10 @@ export interface SavedChartRecord {
   query_text: string | null;
   chart_config: Record<string, unknown>;
   position_index: number;
+  grid_x: number;
+  grid_y: number;
+  grid_w: number;
+  grid_h: number;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +43,10 @@ export interface SavedChartResponse {
   queryText: string | null;
   chartConfig: Record<string, unknown>;
   positionIndex: number;
+  gridX: number;
+  gridY: number;
+  gridW: number;
+  gridH: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,7 +56,15 @@ export interface SavedChartsServiceDeps {
 }
 
 function parseChartConfig(raw: unknown): Record<string, unknown> {
-  return typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>);
+  if (typeof raw !== 'string') {
+    return (raw as Record<string, unknown>) ?? {};
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    logger.warn({ raw: raw.substring(0, 100) }, 'Failed to parse chart_config JSON');
+    return {};
+  }
 }
 
 function toResponse(record: SavedChartRecord): SavedChartResponse {
@@ -58,6 +74,10 @@ function toResponse(record: SavedChartRecord): SavedChartResponse {
     queryText: record.query_text,
     chartConfig: record.chart_config,
     positionIndex: record.position_index,
+    gridX: record.grid_x ?? 0,
+    gridY: record.grid_y ?? 0,
+    gridW: record.grid_w ?? 6,
+    gridH: record.grid_h ?? 4,
     createdAt: record.created_at,
     updatedAt: record.updated_at,
   };
@@ -96,13 +116,21 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
       );
     }
 
-    // Determine next position index
+    // Determine next position index and grid placement
     const maxPositionResult = await db('saved_charts')
       .where({ store_id: storeId })
       .max('position_index as max_pos')
       .first<{ max_pos: number | null }>();
 
     const nextPosition = (maxPositionResult?.max_pos ?? -1) + 1;
+
+    // Auto-layout: place new chart at next available grid row
+    const maxYResult = await db('saved_charts')
+      .where({ store_id: storeId })
+      .max(db.raw('grid_y + grid_h') as unknown as string)
+      .first<{ max: number | null }>();
+
+    const nextGridY = maxYResult?.max ?? 0;
 
     const [inserted] = await db('saved_charts')
       .insert({
@@ -111,6 +139,10 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
         query_text: input.queryText?.trim() || null,
         chart_config: JSON.stringify(input.chartConfig),
         position_index: nextPosition,
+        grid_x: 0,
+        grid_y: nextGridY,
+        grid_w: 6,
+        grid_h: 4,
       })
       .returning('*');
 

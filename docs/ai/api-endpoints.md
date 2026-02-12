@@ -55,7 +55,7 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 | POST | `/api/dashboards/charts` | Save a chart. Body: `{ title, queryText, chartConfig }` [implemented] |
 | PUT | `/api/dashboards/charts/:id` | Update saved chart [implemented] |
 | DELETE | `/api/dashboards/charts/:id` | Delete saved chart [implemented] |
-| PUT | `/api/dashboards/layout` | Update chart positions. Body: `{ positions: [...] }` [implemented] |
+| PUT | `/api/dashboards/grid-layout` | Update chart grid positions. Body: `{ items: [{ id, gridX, gridY, gridW, gridH }] }` [implemented] |
 
 ### Reports (Phase 2)
 | Method | Path | Description |
@@ -83,6 +83,7 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_save_chart` | Proxies to POST /api/dashboards/charts — saves chart to dashboard (nonce required) [implemented] |
 | `waa_list_charts` | Proxies to GET /api/dashboards/charts — lists saved charts (nonce required) [implemented] |
 | `waa_delete_chart` | Proxies to DELETE /api/dashboards/charts/:id — removes saved chart (nonce required) [implemented] |
+| `waa_update_grid_layout` | Proxies to PUT /api/dashboards/grid-layout — updates chart grid positions (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

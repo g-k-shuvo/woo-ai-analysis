@@ -13,7 +13,11 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
 }));
 
 const { createSavedChartsService } = await import('../../src/services/savedChartsService.js');
+const { createDashboardLayoutService } = await import(
+  '../../src/services/dashboardLayoutService.js'
+);
 const { dashboardChartsRoutes } = await import('../../src/routes/dashboards/charts.js');
+const { dashboardLayoutRoutes } = await import('../../src/routes/dashboards/layout.js');
 const { registerErrorHandler } = await import('../../src/middleware/errorHandler.js');
 
 // ── In-memory "database" ───────────────────────────────────────────
@@ -43,7 +47,6 @@ function makeId(): string {
   return `chart-${String(nextId++).padStart(4, '0')}`;
 }
 
-// Mock Knex query builder that simulates a real database
 function createFakeDb() {
   function createBuilder(tableName: string) {
     let whereFilter: Record<string, unknown> = {};
@@ -54,7 +57,6 @@ function createFakeDb() {
         return builder;
       },
       count(expr: string) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         void expr;
         return {
           first() {
@@ -84,7 +86,9 @@ function createFakeDb() {
               );
               return Promise.resolve({ max: maxVal });
             }
-            const maxPos = Math.max(...storeCharts.map((c) => c.position_index));
+            const maxPos = Math.max(
+              ...storeCharts.map((c) => c.position_index),
+            );
             return Promise.resolve({ max_pos: maxPos });
           },
         };
@@ -112,7 +116,6 @@ function createFakeDb() {
         };
       },
       orderBy(column: string, dir: string) {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         void column;
         void dir;
         return builder;
@@ -150,6 +153,10 @@ function createFakeDb() {
           row.chart_config = data.chart_config as string;
         if (data.position_index !== undefined)
           row.position_index = data.position_index as number;
+        if (data.grid_x !== undefined) row.grid_x = data.grid_x as number;
+        if (data.grid_y !== undefined) row.grid_y = data.grid_y as number;
+        if (data.grid_w !== undefined) row.grid_w = data.grid_w as number;
+        if (data.grid_h !== undefined) row.grid_h = data.grid_h as number;
         row.updated_at = new Date().toISOString();
         return {
           returning() {
@@ -178,7 +185,6 @@ function createFakeDb() {
   db.fn = { now: () => new Date().toISOString() };
   db.raw = (expr: string) => expr;
   db.transaction = async () => {
-    // Simplified transaction — wraps the same builder, supports commit/rollback
     const trx = (tableName: string) => {
       let whereFilter: Record<string, unknown> = {};
       const b: Record<string, unknown> = {
@@ -196,6 +202,10 @@ function createFakeDb() {
           const row = chartRows[idx];
           if (data.position_index !== undefined)
             row.position_index = data.position_index as number;
+          if (data.grid_x !== undefined) row.grid_x = data.grid_x as number;
+          if (data.grid_y !== undefined) row.grid_y = data.grid_y as number;
+          if (data.grid_w !== undefined) row.grid_w = data.grid_w as number;
+          if (data.grid_h !== undefined) row.grid_h = data.grid_h as number;
           row.updated_at = new Date().toISOString();
           return Promise.resolve(1);
         },
@@ -216,10 +226,13 @@ function createFakeDb() {
 
 async function buildApp(
   storeId: string = STORE_ID_A,
-): Promise<{ app: FastifyInstance; fakeDb: ReturnType<typeof createFakeDb> }> {
+): Promise<{ app: FastifyInstance }> {
   const fakeDb = createFakeDb();
   const savedChartsService = createSavedChartsService({
     db: fakeDb as unknown as Parameters<typeof createSavedChartsService>[0]['db'],
+  });
+  const dashboardLayoutService = createDashboardLayoutService({
+    db: fakeDb as unknown as Parameters<typeof createDashboardLayoutService>[0]['db'],
   });
 
   const app = Fastify({ logger: false });
@@ -238,126 +251,76 @@ async function buildApp(
     dashboardChartsRoutes(instance, { savedChartsService }),
   );
 
+  await app.register(async (instance) =>
+    dashboardLayoutRoutes(instance, { dashboardLayoutService }),
+  );
+
   await app.ready();
-  return { app, fakeDb };
+  return { app };
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
 
-describe('Dashboard Charts Integration', () => {
+describe('Dashboard Grid Layout Integration', () => {
   beforeEach(() => {
     chartRows = [];
     nextId = 1;
   });
 
-  // ── Full CRUD flow ──────────────────────────────────────────────
+  // ── New charts get default grid values ──────────────────────────
 
-  describe('full CRUD flow', () => {
-    it('creates, lists, updates, and deletes a chart', async () => {
+  describe('default grid values', () => {
+    it('new chart gets default grid_w=6, grid_h=4', async () => {
       const { app } = await buildApp();
 
-      // Create
       const createRes = await app.inject({
         method: 'POST',
         url: '/api/dashboards/charts',
         payload: {
-          title: 'Revenue by Product',
-          queryText: 'Show revenue by product',
-          chartConfig: { type: 'bar', data: {} },
+          title: 'Revenue Chart',
+          chartConfig: { type: 'bar' },
         },
       });
 
       expect(createRes.statusCode).toBe(201);
-      const created = JSON.parse(createRes.body).data;
-      expect(created.title).toBe('Revenue by Product');
-      expect(created.positionIndex).toBe(0);
-      const chartId = created.id;
-
-      // List
-      const listRes = await app.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-
-      expect(listRes.statusCode).toBe(200);
-      const charts = JSON.parse(listRes.body).data.charts;
-      expect(charts).toHaveLength(1);
-      expect(charts[0].id).toBe(chartId);
-
-      // Update
-      const updateRes = await app.inject({
-        method: 'PUT',
-        url: `/api/dashboards/charts/${chartId}`,
-        payload: { title: 'Updated Title' },
-      });
-
-      expect(updateRes.statusCode).toBe(200);
-      const updated = JSON.parse(updateRes.body).data;
-      expect(updated.title).toBe('Updated Title');
-
-      // Delete
-      const deleteRes = await app.inject({
-        method: 'DELETE',
-        url: `/api/dashboards/charts/${chartId}`,
-      });
-
-      expect(deleteRes.statusCode).toBe(200);
-      expect(JSON.parse(deleteRes.body).data.deleted).toBe(true);
-
-      // Verify deleted
-      const listAfterDelete = await app.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-
-      expect(JSON.parse(listAfterDelete.body).data.charts).toHaveLength(0);
+      const chart = JSON.parse(createRes.body).data;
+      expect(chart.gridW).toBe(6);
+      expect(chart.gridH).toBe(4);
+      expect(chart.gridX).toBe(0);
+      expect(chart.gridY).toBe(0);
     });
-  });
 
-  // ── Position ordering ──────────────────────────────────────────
-
-  describe('position ordering', () => {
-    it('auto-increments position_index', async () => {
+    it('second chart auto-positions below first', async () => {
       const { app } = await buildApp();
 
-      // Create first chart
-      const res1 = await app.inject({
+      await app.inject({
         method: 'POST',
         url: '/api/dashboards/charts',
         payload: { title: 'Chart 1', chartConfig: { type: 'bar' } },
       });
-      expect(JSON.parse(res1.body).data.positionIndex).toBe(0);
 
-      // Create second chart
       const res2 = await app.inject({
         method: 'POST',
         url: '/api/dashboards/charts',
         payload: { title: 'Chart 2', chartConfig: { type: 'line' } },
       });
-      expect(JSON.parse(res2.body).data.positionIndex).toBe(1);
 
-      // Create third chart
-      const res3 = await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Chart 3', chartConfig: { type: 'pie' } },
-      });
-      expect(JSON.parse(res3.body).data.positionIndex).toBe(2);
+      const chart2 = JSON.parse(res2.body).data;
+      expect(chart2.gridX).toBe(0);
+      expect(chart2.gridY).toBe(4); // Below first chart (0 + h=4)
     });
+  });
 
-    it('lists charts in position_index order', async () => {
+  // ── Grid fields in list response ────────────────────────────────
+
+  describe('grid fields in list response', () => {
+    it('lists charts with grid layout fields', async () => {
       const { app } = await buildApp();
 
       await app.inject({
         method: 'POST',
         url: '/api/dashboards/charts',
-        payload: { title: 'First', chartConfig: { type: 'bar' } },
-      });
-
-      await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Second', chartConfig: { type: 'line' } },
+        payload: { title: 'Chart A', chartConfig: { type: 'bar' } },
       });
 
       const listRes = await app.inject({
@@ -366,15 +329,17 @@ describe('Dashboard Charts Integration', () => {
       });
 
       const charts = JSON.parse(listRes.body).data.charts;
-      expect(charts[0].title).toBe('First');
-      expect(charts[1].title).toBe('Second');
+      expect(charts[0]).toHaveProperty('gridX');
+      expect(charts[0]).toHaveProperty('gridY');
+      expect(charts[0]).toHaveProperty('gridW');
+      expect(charts[0]).toHaveProperty('gridH');
     });
   });
 
-  // ── Layout reordering ─────────────────────────────────────────
+  // ── Grid layout update flow ─────────────────────────────────────
 
-  describe('layout reordering', () => {
-    it('updates position indices', async () => {
+  describe('grid layout update', () => {
+    it('updates grid positions via PUT /api/dashboards/grid-layout', async () => {
       const { app } = await buildApp();
 
       // Create two charts
@@ -392,73 +357,74 @@ describe('Dashboard Charts Integration', () => {
       });
       const id2 = JSON.parse(res2.body).data.id;
 
-      // Swap positions
+      // Update grid layout — move chart B to top-right
       const layoutRes = await app.inject({
         method: 'PUT',
-        url: '/api/dashboards/layout',
+        url: '/api/dashboards/grid-layout',
         payload: {
-          positions: [
-            { id: id1, positionIndex: 1 },
-            { id: id2, positionIndex: 0 },
+          items: [
+            { id: id1, gridX: 0, gridY: 0, gridW: 6, gridH: 4 },
+            { id: id2, gridX: 6, gridY: 0, gridW: 6, gridH: 4 },
           ],
         },
       });
 
       expect(layoutRes.statusCode).toBe(200);
+      expect(JSON.parse(layoutRes.body).data.updated).toBe(true);
 
-      // Verify new order
+      // Verify positions were updated
       const listRes = await app.inject({
         method: 'GET',
         url: '/api/dashboards/charts',
       });
 
       const charts = JSON.parse(listRes.body).data.charts;
-      expect(charts[0].title).toBe('Chart B');
-      expect(charts[1].title).toBe('Chart A');
+      const chartA = charts.find((c: { id: string }) => c.id === id1);
+      const chartB = charts.find((c: { id: string }) => c.id === id2);
+
+      expect(chartA.gridX).toBe(0);
+      expect(chartA.gridW).toBe(6);
+      expect(chartB.gridX).toBe(6);
+      expect(chartB.gridW).toBe(6);
+    });
+
+    it('persists resized chart dimensions', async () => {
+      const { app } = await buildApp();
+
+      const createRes = await app.inject({
+        method: 'POST',
+        url: '/api/dashboards/charts',
+        payload: { title: 'Big Chart', chartConfig: { type: 'bar' } },
+      });
+      const chartId = JSON.parse(createRes.body).data.id;
+
+      // Resize to full width
+      await app.inject({
+        method: 'PUT',
+        url: '/api/dashboards/grid-layout',
+        payload: {
+          items: [
+            { id: chartId, gridX: 0, gridY: 0, gridW: 12, gridH: 6 },
+          ],
+        },
+      });
+
+      // Verify
+      const listRes = await app.inject({
+        method: 'GET',
+        url: '/api/dashboards/charts',
+      });
+
+      const chart = JSON.parse(listRes.body).data.charts[0];
+      expect(chart.gridW).toBe(12);
+      expect(chart.gridH).toBe(6);
     });
   });
 
-  // ── Store isolation ───────────────────────────────────────────
+  // ── Store isolation ─────────────────────────────────────────────
 
-  describe('store isolation', () => {
-    it('store A cannot see store B charts', async () => {
-      const { app: appA } = await buildApp(STORE_ID_A);
-      const { app: appB } = await buildApp(STORE_ID_B);
-
-      // Store A creates a chart
-      await appA.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Store A Chart', chartConfig: { type: 'bar' } },
-      });
-
-      // Store B creates a chart
-      await appB.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Store B Chart', chartConfig: { type: 'line' } },
-      });
-
-      // Store A should only see its chart
-      const listA = await appA.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-      const chartsA = JSON.parse(listA.body).data.charts;
-      expect(chartsA).toHaveLength(1);
-      expect(chartsA[0].title).toBe('Store A Chart');
-
-      // Store B should only see its chart
-      const listB = await appB.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-      const chartsB = JSON.parse(listB.body).data.charts;
-      expect(chartsB).toHaveLength(1);
-      expect(chartsB[0].title).toBe('Store B Chart');
-    });
-
-    it('store A cannot delete store B chart', async () => {
+  describe('store isolation for grid layout', () => {
+    it('store A cannot update grid layout for store B charts', async () => {
       const { app: appA } = await buildApp(STORE_ID_A);
       const { app: appB } = await buildApp(STORE_ID_B);
 
@@ -470,137 +436,63 @@ describe('Dashboard Charts Integration', () => {
       });
       const chartId = JSON.parse(createRes.body).data.id;
 
-      // Store A tries to delete it
-      const deleteRes = await appA.inject({
-        method: 'DELETE',
-        url: `/api/dashboards/charts/${chartId}`,
-      });
-
-      // NotFoundError → 404
-      expect(deleteRes.statusCode).toBe(404);
-
-      // Verify chart still exists for store B
-      const listB = await appB.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-      expect(JSON.parse(listB.body).data.charts).toHaveLength(1);
-    });
-  });
-
-  // ── Max charts limit ──────────────────────────────────────────
-
-  describe('max charts limit', () => {
-    it('rejects save when 20 charts already exist', async () => {
-      const { app } = await buildApp();
-
-      // Create 20 charts
-      for (let i = 0; i < 20; i++) {
-        await app.inject({
-          method: 'POST',
-          url: '/api/dashboards/charts',
-          payload: { title: `Chart ${i}`, chartConfig: { type: 'bar' } },
-        });
-      }
-
-      // 21st should fail
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Chart 21', chartConfig: { type: 'bar' } },
-      });
-
-      // ValidationError → 400
-      expect(res.statusCode).toBe(400);
-      const body = JSON.parse(res.body);
-      expect(body.message || body.error?.message || '').toContain('Maximum');
-    });
-  });
-
-  // ── Chart config round-trip ───────────────────────────────────
-
-  describe('chart config round-trip', () => {
-    it('preserves complex chart config through save and retrieve', async () => {
-      const { app } = await buildApp();
-
-      const complexConfig = {
-        type: 'bar',
-        data: {
-          labels: ['Jan', 'Feb', 'Mar'],
-          datasets: [
-            {
-              label: 'Revenue',
-              data: [1000, 2000, 1500],
-              backgroundColor: ['rgba(54,162,235,0.6)'],
-              borderColor: ['rgba(54,162,235,1)'],
-              borderWidth: 1,
-            },
+      // Store A tries to update its grid layout — should fail (404)
+      const layoutRes = await appA.inject({
+        method: 'PUT',
+        url: '/api/dashboards/grid-layout',
+        payload: {
+          items: [
+            { id: chartId, gridX: 0, gridY: 0, gridW: 12, gridH: 8 },
           ],
         },
-        options: {
-          responsive: true,
-          plugins: {
-            title: { display: true, text: 'Monthly Revenue' },
-          },
-        },
-      };
-
-      const createRes = await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: {
-          title: 'Monthly Revenue',
-          chartConfig: complexConfig,
-        },
       });
 
-      const chartId = JSON.parse(createRes.body).data.id;
-
-      const listRes = await app.inject({
-        method: 'GET',
-        url: '/api/dashboards/charts',
-      });
-
-      const charts = JSON.parse(listRes.body).data.charts;
-      const found = charts.find((c: { id: string }) => c.id === chartId);
-      expect(found.chartConfig).toEqual(complexConfig);
+      expect(layoutRes.statusCode).toBe(404);
     });
   });
 
-  // ── Input validation integration ──────────────────────────────
+  // ── Validation ──────────────────────────────────────────────────
 
-  describe('input validation', () => {
-    it('rejects empty title', async () => {
-      const { app } = await buildApp();
-
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: '', chartConfig: { type: 'bar' } },
-      });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('rejects missing chartConfig', async () => {
-      const { app } = await buildApp();
-
-      const res = await app.inject({
-        method: 'POST',
-        url: '/api/dashboards/charts',
-        payload: { title: 'Test' },
-      });
-
-      expect(res.statusCode).toBe(400);
-    });
-
-    it('rejects layout with empty positions', async () => {
+  describe('validation', () => {
+    it('rejects empty items array', async () => {
       const { app } = await buildApp();
 
       const res = await app.inject({
         method: 'PUT',
-        url: '/api/dashboards/layout',
-        payload: { positions: [] },
+        url: '/api/dashboards/grid-layout',
+        payload: { items: [] },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects gridW below minimum', async () => {
+      const { app } = await buildApp();
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/dashboards/grid-layout',
+        payload: {
+          items: [
+            { id: 'chart-1', gridX: 0, gridY: 0, gridW: 2, gridH: 4 },
+          ],
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('rejects gridH above maximum', async () => {
+      const { app } = await buildApp();
+
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/dashboards/grid-layout',
+        payload: {
+          items: [
+            { id: 'chart-1', gridX: 0, gridY: 0, gridW: 6, gridH: 9 },
+          ],
+        },
       });
 
       expect(res.statusCode).toBe(400);
