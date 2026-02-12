@@ -123,11 +123,12 @@ final class Admin_UI {
 			'woo-ai-analytics-admin',
 			'waaData',
 			array(
-				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
-				'nonce'     => wp_create_nonce( 'waa_nonce' ),
-				'apiUrl'    => get_option( 'waa_api_url', '' ),
-				'connected' => (bool) get_option( 'waa_connected', false ),
-				'page'      => isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification
+				'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+				'nonce'               => wp_create_nonce( 'waa_nonce' ),
+				'apiUrl'              => get_option( 'waa_api_url', '' ),
+				'connected'           => (bool) get_option( 'waa_connected', false ),
+				'onboardingComplete'  => Onboarding::is_completed() || Onboarding::is_dismissed(),
+				'page'                => isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '', // phpcs:ignore WordPress.Security.NonceVerification
 			)
 		);
 	}

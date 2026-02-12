@@ -54,7 +54,7 @@ describe('Store Routes', () => {
       const mockService = createMockStoreService();
       app = Fastify();
       registerErrorHandler(app);
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({
@@ -85,7 +85,7 @@ describe('Store Routes', () => {
 
       app = Fastify();
       registerErrorHandler(app);
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({
@@ -109,7 +109,7 @@ describe('Store Routes', () => {
 
       app = Fastify();
       registerErrorHandler(app);
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({
@@ -131,7 +131,7 @@ describe('Store Routes', () => {
 
       app = Fastify();
       registerErrorHandler(app);
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({
@@ -163,7 +163,7 @@ describe('Store Routes', () => {
         };
       });
 
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({ method: 'GET', url: '/api/stores/status' });
@@ -194,7 +194,7 @@ describe('Store Routes', () => {
         };
       });
 
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({
@@ -227,7 +227,7 @@ describe('Store Routes', () => {
         };
       });
 
-      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
+      await app.register(async (instance) => storeRoutes(instance, { storeService: mockService as any, db: {} as any })); // eslint-disable-line @typescript-eslint/no-explicit-any
       await app.ready();
 
       const response = await app.inject({

@@ -41,7 +41,7 @@
 - [x] **4.6** Chart types — Bar, line, pie, doughnut, table view
 
 ### Sprint 5: Polish & Launch (Week 11–12)
-- [ ] **5.1** Onboarding wizard — Install → Connect → Sync → First question
+- [x] **5.1** Onboarding wizard — Install → Connect → Sync → First question
 - [ ] **5.2** Error handling — Graceful AI failures, sync errors, rate limits
 - [ ] **5.3** AI test suite — 50+ question→answer test cases
 - [ ] **5.4** Backend tests — Jest unit + integration tests
