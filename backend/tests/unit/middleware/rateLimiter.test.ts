@@ -22,18 +22,16 @@ const STORE_ID = '550e8400-e29b-41d4-a716-446655440000';
 const STORE_ID_B = '660e8400-e29b-41d4-a716-446655440001';
 
 interface MockRedis {
-  incr: jest.Mock<(key: string) => Promise<number>>;
-  expire: jest.Mock<(key: string, seconds: number) => Promise<number>>;
+  eval: jest.Mock<(...args: unknown[]) => Promise<number>>;
   ttl: jest.Mock<(key: string) => Promise<number>>;
 }
 
 function createMockRedis(counter = { value: 0 }): MockRedis {
   return {
-    incr: jest.fn<(key: string) => Promise<number>>().mockImplementation(async () => {
+    eval: jest.fn<(...args: unknown[]) => Promise<number>>().mockImplementation(async () => {
       counter.value += 1;
       return counter.value;
     }),
-    expire: jest.fn<(key: string, seconds: number) => Promise<number>>().mockResolvedValue(1),
     ttl: jest.fn<(key: string) => Promise<number>>().mockResolvedValue(45),
   };
 }
@@ -72,7 +70,7 @@ describe('rateLimiter', () => {
       await expect(rateLimiter.checkLimit(STORE_ID)).resolves.toBeUndefined();
     });
 
-    it('calls redis.incr with the correct key', async () => {
+    it('calls redis.eval with the correct key and window', async () => {
       const counter = { value: 0 };
       mockRedis = createMockRedis(counter);
       const rateLimiter = createRateLimiter({
@@ -82,10 +80,15 @@ describe('rateLimiter', () => {
 
       await rateLimiter.checkLimit(STORE_ID);
 
-      expect(mockRedis.incr).toHaveBeenCalledWith(`ratelimit:${STORE_ID}:chat`);
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining('INCR'),
+        1,
+        `ratelimit:${STORE_ID}:chat`,
+        60,
+      );
     });
 
-    it('sets TTL on first request in window', async () => {
+    it('uses atomic Lua script for INCR and EXPIRE', async () => {
       const counter = { value: 0 };
       mockRedis = createMockRedis(counter);
       const rateLimiter = createRateLimiter({
@@ -95,20 +98,9 @@ describe('rateLimiter', () => {
 
       await rateLimiter.checkLimit(STORE_ID);
 
-      expect(mockRedis.expire).toHaveBeenCalledWith(`ratelimit:${STORE_ID}:chat`, 60);
-    });
-
-    it('does not set TTL when not first request', async () => {
-      const counter = { value: 5 };
-      mockRedis = createMockRedis(counter);
-      const rateLimiter = createRateLimiter({
-        redis: mockRedis as unknown as Parameters<typeof createRateLimiter>[0]['redis'],
-        config: { maxRequests: 20, windowSeconds: 60 },
-      });
-
-      await rateLimiter.checkLimit(STORE_ID);
-
-      expect(mockRedis.expire).not.toHaveBeenCalled();
+      const luaScript = (mockRedis.eval.mock.calls as unknown[][])[0][0] as string;
+      expect(luaScript).toContain('INCR');
+      expect(luaScript).toContain('EXPIRE');
     });
   });
 
@@ -210,18 +202,19 @@ describe('rateLimiter', () => {
       await rateLimiter.checkLimit(STORE_ID);
       await rateLimiter.checkLimit(STORE_ID_B);
 
-      const calls = mockRedis.incr.mock.calls as unknown[][];
-      expect(calls[0][0]).toBe(`ratelimit:${STORE_ID}:chat`);
-      expect(calls[1][0]).toBe(`ratelimit:${STORE_ID_B}:chat`);
+      const calls = mockRedis.eval.mock.calls as unknown[][];
+      // eval args: (luaScript, 1, key, windowSeconds)
+      expect(calls[0][2]).toBe(`ratelimit:${STORE_ID}:chat`);
+      expect(calls[1][2]).toBe(`ratelimit:${STORE_ID_B}:chat`);
     });
   });
 
   // ── checkLimit — Redis error handling ────────────────────────────
 
   describe('checkLimit — Redis error handling', () => {
-    it('allows request when Redis incr fails', async () => {
+    it('allows request when Redis eval fails', async () => {
       mockRedis = createMockRedis();
-      mockRedis.incr.mockRejectedValue(new Error('Redis connection lost'));
+      mockRedis.eval.mockRejectedValue(new Error('Redis connection lost'));
       const rateLimiter = createRateLimiter({
         redis: mockRedis as unknown as Parameters<typeof createRateLimiter>[0]['redis'],
         config: { maxRequests: 20, windowSeconds: 60 },
@@ -232,7 +225,7 @@ describe('rateLimiter', () => {
 
     it('logs error when Redis fails', async () => {
       mockRedis = createMockRedis();
-      mockRedis.incr.mockRejectedValue(new Error('Redis connection lost'));
+      mockRedis.eval.mockRejectedValue(new Error('Redis connection lost'));
       const rateLimiter = createRateLimiter({
         redis: mockRedis as unknown as Parameters<typeof createRateLimiter>[0]['redis'],
         config: { maxRequests: 20, windowSeconds: 60 },
@@ -255,7 +248,7 @@ describe('rateLimiter', () => {
         config: { maxRequests: 20, windowSeconds: 60 },
       });
 
-      // When incr succeeds (returning 21) but ttl throws, the whole block
+      // When eval succeeds (returning 21) but ttl throws, the whole block
       // throws a non-RateLimitError, which gets caught and logged.
       // The request is allowed through.
       await expect(rateLimiter.checkLimit(STORE_ID)).resolves.toBeUndefined();
@@ -287,7 +280,7 @@ describe('rateLimiter', () => {
       await expect(rateLimiter.checkLimit(STORE_ID)).rejects.toBeInstanceOf(RateLimitError);
     });
 
-    it('uses custom windowSeconds for TTL', async () => {
+    it('passes custom windowSeconds to Lua script', async () => {
       const counter = { value: 0 };
       mockRedis = createMockRedis(counter);
       const rateLimiter = createRateLimiter({
@@ -297,7 +290,12 @@ describe('rateLimiter', () => {
 
       await rateLimiter.checkLimit(STORE_ID);
 
-      expect(mockRedis.expire).toHaveBeenCalledWith(`ratelimit:${STORE_ID}:chat`, 120);
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.any(String),
+        1,
+        `ratelimit:${STORE_ID}:chat`,
+        120,
+      );
     });
   });
 

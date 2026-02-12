@@ -20,6 +20,20 @@ export interface RateLimiterDeps {
   config: RateLimiterConfig;
 }
 
+/**
+ * Lua script for atomic INCR + EXPIRE.
+ * Returns the incremented counter value.
+ * Sets TTL only on the first request (when counter == 1) to avoid race conditions
+ * where a crash between INCR and EXPIRE could leave a key without TTL.
+ */
+const INCR_WITH_EXPIRE_LUA = `
+local current = redis.call('INCR', KEYS[1])
+if tonumber(current) == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return current
+`;
+
 export function createRateLimiter(deps: RateLimiterDeps) {
   const { redis, config } = deps;
 
@@ -31,12 +45,13 @@ export function createRateLimiter(deps: RateLimiterDeps) {
     const key = `ratelimit:${storeId}:chat`;
 
     try {
-      const current = await redis.incr(key);
-
-      // Set TTL on first request in the window
-      if (current === 1) {
-        await redis.expire(key, config.windowSeconds);
-      }
+      // Atomic INCR + EXPIRE via Lua to prevent keys without TTL on crash
+      const current = await redis.eval(
+        INCR_WITH_EXPIRE_LUA,
+        1,
+        key,
+        config.windowSeconds,
+      ) as number;
 
       if (current > config.maxRequests) {
         const ttl = await redis.ttl(key);

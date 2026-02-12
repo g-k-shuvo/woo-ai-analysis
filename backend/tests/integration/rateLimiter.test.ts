@@ -42,8 +42,7 @@ interface MockChatService {
 }
 
 interface MockRedis {
-  incr: jest.Mock<(key: string) => Promise<number>>;
-  expire: jest.Mock<(key: string, seconds: number) => Promise<number>>;
+  eval: jest.Mock<(...args: unknown[]) => Promise<number>>;
   ttl: jest.Mock<(key: string) => Promise<number>>;
 }
 
@@ -100,11 +99,10 @@ describe('Rate limiting integration — POST /api/chat/query', () => {
     };
 
     mockRedis = {
-      incr: jest.fn<(key: string) => Promise<number>>().mockImplementation(async () => {
+      eval: jest.fn<(...args: unknown[]) => Promise<number>>().mockImplementation(async () => {
         counter.value += 1;
         return counter.value;
       }),
-      expire: jest.fn<(key: string, seconds: number) => Promise<number>>().mockResolvedValue(1),
       ttl: jest.fn<(key: string) => Promise<number>>().mockResolvedValue(45),
     };
 
@@ -217,7 +215,7 @@ describe('Rate limiting integration — POST /api/chat/query', () => {
   });
 
   it('allows requests through when Redis errors', async () => {
-    mockRedis.incr.mockRejectedValue(new Error('Redis down'));
+    mockRedis.eval.mockRejectedValue(new Error('Redis down'));
 
     const response = await app.inject({
       method: 'POST',
@@ -236,7 +234,12 @@ describe('Rate limiting integration — POST /api/chat/query', () => {
       payload: { question: 'Revenue?' },
     });
 
-    expect(mockRedis.incr).toHaveBeenCalledWith(`ratelimit:${STORE_ID}:chat`);
+    expect(mockRedis.eval).toHaveBeenCalledWith(
+      expect.stringContaining('INCR'),
+      1,
+      `ratelimit:${STORE_ID}:chat`,
+      60,
+    );
   });
 });
 

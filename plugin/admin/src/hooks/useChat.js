@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from '@wordpress/element';
+import { useState, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 const { ajaxUrl, nonce } = window.waaData || {};
@@ -23,7 +23,6 @@ function nextId() {
 export default function useChat() {
 	const [ messages, setMessages ] = useState( [] );
 	const [ loading, setLoading ] = useState( false );
-	const lastQuestionRef = useRef( null );
 
 	const sendMessage = useCallback( async ( question ) => {
 		if ( ! question || ! question.trim() ) {
@@ -31,7 +30,6 @@ export default function useChat() {
 		}
 
 		const trimmed = question.trim();
-		lastQuestionRef.current = trimmed;
 
 		// Add user message
 		const userMessage = {
@@ -110,7 +108,6 @@ export default function useChat() {
 
 	const clearMessages = useCallback( () => {
 		setMessages( [] );
-		lastQuestionRef.current = null;
 	}, [] );
 
 	return { messages, loading, sendMessage, retryLast, clearMessages };

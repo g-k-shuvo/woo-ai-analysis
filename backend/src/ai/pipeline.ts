@@ -168,11 +168,13 @@ async function callOpenAIWithRetry(
 
       if (attempt < OPENAI_MAX_RETRIES && isRetryableError(err)) {
         const delayMs = OPENAI_RETRY_BASE_MS * Math.pow(2, attempt);
+        const jitterMs = Math.random() * 1000;
+        const delayWithJitterMs = delayMs + jitterMs;
         logger.warn(
-          { storeId, attempt: attempt + 1, maxRetries: OPENAI_MAX_RETRIES, delayMs },
+          { storeId, attempt: attempt + 1, maxRetries: OPENAI_MAX_RETRIES, delayMs: Math.round(delayWithJitterMs) },
           'OpenAI call failed — retrying',
         );
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        await new Promise((resolve) => setTimeout(resolve, delayWithJitterMs));
         continue;
       }
 
