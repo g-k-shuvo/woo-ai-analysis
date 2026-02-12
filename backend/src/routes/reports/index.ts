@@ -19,6 +19,19 @@ const generateReportSchema = {
   },
 };
 
+const reportIdParamsSchema = {
+  params: {
+    type: 'object' as const,
+    required: ['id'],
+    properties: {
+      id: {
+        type: 'string' as const,
+        pattern: '^[0-9a-fA-F-]{1,64}$',
+      },
+    },
+  },
+};
+
 export async function reportRoutes(
   fastify: FastifyInstance,
   deps: ReportRoutesDeps,
@@ -56,6 +69,7 @@ export async function reportRoutes(
   // GET /api/reports/:id/download — download PDF file
   fastify.get<{ Params: { id: string } }>(
     '/api/reports/:id/download',
+    { schema: reportIdParamsSchema },
     async (request, reply) => {
       const store = request.store!;
       const { id } = request.params;
@@ -73,6 +87,7 @@ export async function reportRoutes(
   // DELETE /api/reports/:id — delete a report
   fastify.delete<{ Params: { id: string } }>(
     '/api/reports/:id',
+    { schema: reportIdParamsSchema },
     async (request, reply) => {
       const store = request.store!;
       const { id } = request.params;

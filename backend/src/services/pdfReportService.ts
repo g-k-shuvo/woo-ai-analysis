@@ -52,11 +52,11 @@ export function createPdfReportService(deps: PdfReportServiceDeps) {
       throw new ValidationError(`Title must not exceed ${MAX_TITLE_LENGTH} characters`);
     }
 
-    // Fetch saved charts for this store
+    // Fetch saved charts for this store (only columns needed for PDF)
     const charts = await db('saved_charts')
       .where({ store_id: storeId })
       .orderBy('position_index', 'asc')
-      .select('*');
+      .select('title', 'chart_config');
 
     if (charts.length === 0) {
       throw new ValidationError('No saved charts to export. Save some charts to your dashboard first.');
@@ -76,9 +76,16 @@ export function createPdfReportService(deps: PdfReportServiceDeps) {
       // Render each chart to PNG buffer
       const chartImages: Array<{ title: string; buffer: Buffer | null }> = [];
       for (const chart of charts) {
-        const config = typeof chart.chart_config === 'string'
-          ? JSON.parse(chart.chart_config)
-          : chart.chart_config;
+        let config;
+        try {
+          config = typeof chart.chart_config === 'string'
+            ? JSON.parse(chart.chart_config)
+            : chart.chart_config;
+        } catch {
+          logger.warn({ chartTitle: chart.title }, 'Skipping chart with invalid config');
+          chartImages.push({ title: chart.title, buffer: null });
+          continue;
+        }
 
         // Skip table-type charts (they can't be rendered to PNG)
         if (config && config.type === 'table') {
@@ -213,8 +220,9 @@ async function buildPdf(
     // Header
     doc.fontSize(24).text(title, { align: 'center' });
     doc.moveDown(0.5);
+    const now = new Date().toISOString();
     doc.fontSize(10).fillColor('#666666').text(
-      `Generated on ${new Date().toISOString().split('T')[0]} at ${new Date().toISOString().split('T')[1].split('.')[0]} UTC`,
+      `Generated on ${now.split('T')[0]} at ${now.split('T')[1].split('.')[0]} UTC`,
       { align: 'center' },
     );
     doc.fillColor('#000000');

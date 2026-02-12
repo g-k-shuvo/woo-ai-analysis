@@ -511,7 +511,7 @@ describe('DELETE /api/reports/:id', () => {
 
   it('passes different report IDs correctly', async () => {
     mockService.deleteReport.mockResolvedValue(undefined);
-    const customId = 'custom-report-id-123';
+    const customId = 'aabb0000-1111-2222-3333-444455556666';
 
     await app.inject({
       method: 'DELETE',

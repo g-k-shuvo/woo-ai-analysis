@@ -19,7 +19,6 @@
     "seed": "knex --knexfile db/knexfile.ts seed:run"
   },
   "dependencies": {
-    "@types/pdfkit": "^0.17.5",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.34.8",
     "chart.js": "^4.5.1",
@@ -35,6 +34,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/pdfkit": "^0.17.5",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.12.0",
     "@types/pg": "^8.11.11",

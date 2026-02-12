@@ -106,11 +106,13 @@ const STORE_ID_A = 'aaaa0000-0000-0000-0000-000000000001';
 const STORE_ID_B = 'bbbb0000-0000-0000-0000-000000000002';
 
 function makeReportId(): string {
-  return `report-${String(nextReportId++).padStart(4, '0')}`;
+  const n = String(nextReportId++).padStart(4, '0');
+  return `aaaa0000-0000-0000-0000-aaaa0000${n}`;
 }
 
 function makeChartId(): string {
-  return `chart-${String(nextChartId++).padStart(4, '0')}`;
+  const n = String(nextChartId++).padStart(4, '0');
+  return `bbbb0000-0000-0000-0000-bbbb0000${n}`;
 }
 
 // ── Fake Knex query builder ─────────────────────────────────────────
@@ -779,7 +781,7 @@ describe('PDF Reports Integration', () => {
 
       const res = await app.inject({
         method: 'GET',
-        url: '/api/reports/non-existent-id/download',
+        url: '/api/reports/00000000-0000-0000-0000-ffffffffffff/download',
       });
 
       expect(res.statusCode).toBe(404);
@@ -792,7 +794,7 @@ describe('PDF Reports Integration', () => {
 
       const res = await app.inject({
         method: 'DELETE',
-        url: '/api/reports/non-existent-id',
+        url: '/api/reports/00000000-0000-0000-0000-ffffffffffff',
       });
 
       expect(res.statusCode).toBe(404);
