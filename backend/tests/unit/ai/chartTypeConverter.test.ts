@@ -529,6 +529,27 @@ describe('convertChartType', () => {
       expect(result.options.scales?.x.title.text).toBe('Product');
       expect(result.options.scales?.y.title.text).toBe('Revenue ($)');
     });
+
+    it('uses meta xLabel/yLabel when converting pie → bar (no source scales)', () => {
+      const meta = makeMeta({ title: 'Revenue by Category', xLabel: 'Category', yLabel: 'Revenue ($)' });
+      const result = convertChartType(makePieConfig(), makeRows(), 'bar', meta) as ChartConfiguration;
+      expect(result.options.scales?.x.title.text).toBe('Category');
+      expect(result.options.scales?.y.title.text).toBe('Revenue ($)');
+    });
+
+    it('uses meta xLabel/yLabel when converting doughnut → line (no source scales)', () => {
+      const meta = makeMeta({ title: 'Order Status', xLabel: 'Status', yLabel: 'Count' });
+      const result = convertChartType(makeDoughnutConfig(), makeRows(), 'line', meta) as ChartConfiguration;
+      expect(result.options.scales?.x.title.text).toBe('Status');
+      expect(result.options.scales?.y.title.text).toBe('Count');
+    });
+
+    it('falls back to dataKey/labelKey when pie → bar and no xLabel/yLabel in meta', () => {
+      const meta = makeMeta({ title: 'Revenue by Category', xLabel: undefined, yLabel: undefined });
+      const result = convertChartType(makePieConfig(), makeRows(), 'bar', meta) as ChartConfiguration;
+      expect(result.options.scales?.x.title.text).toBe('name');
+      expect(result.options.scales?.y.title.text).toBe('revenue');
+    });
   });
 
   // ── Responsive and borderWidth ────────────────────────────────

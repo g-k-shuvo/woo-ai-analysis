@@ -82,7 +82,7 @@ export function convertChartType(
   }
 
   // Chart → chart conversion
-  return convertBetweenChartTypes(currentConfig, targetType, meta.title);
+  return convertBetweenChartTypes(currentConfig, targetType, meta);
 }
 
 /**
@@ -138,28 +138,26 @@ function buildChartFromRows(
 function convertBetweenChartTypes(
   source: ChartConfiguration,
   targetType: 'bar' | 'line' | 'pie' | 'doughnut',
-  title: string,
+  meta: ChartMeta & { title: string },
 ): ChartConfiguration {
   const labels = source.data.labels;
   const data = source.data.datasets[0].data;
   const count = data.length;
 
   if (targetType === 'pie' || targetType === 'doughnut') {
-    return buildPieConfig(targetType, labels, data, count, title);
+    return buildPieConfig(targetType, labels, data, count, meta.title);
   }
 
-  // For bar/line, try to reuse axis labels from source if available
+  // For bar/line, prefer axis labels from source scales, falling back to meta
   const xText = source.options.scales?.x?.title?.text;
   const yText = source.options.scales?.y?.title?.text;
-  const meta: ChartMeta & { title: string } = {
-    title,
-    dataKey: yText ?? '',
-    labelKey: xText ?? '',
-    xLabel: xText,
-    yLabel: yText,
+  const derivedMeta: ChartMeta & { title: string } = {
+    ...meta,
+    xLabel: xText ?? meta.xLabel,
+    yLabel: yText ?? meta.yLabel,
   };
 
-  return buildAxisConfig(targetType, labels, data, count, meta);
+  return buildAxisConfig(targetType, labels, data, count, derivedMeta);
 }
 
 function buildPieConfig(

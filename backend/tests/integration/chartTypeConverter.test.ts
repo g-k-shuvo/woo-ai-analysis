@@ -121,12 +121,14 @@ describe('chartTypeConverter integration', () => {
 
       const meta = makeMeta(spec);
 
-      // Pie → Bar
+      // Pie → Bar: must use meta for axis labels since pie has no scales
       const barResult = convertChartType(pieConfig, rows, 'bar', meta) as ChartConfiguration;
       expect(barResult.type).toBe('bar');
       expect(barResult.data.labels).toEqual(['Electronics', 'Clothing', 'Food & Drink', 'Books']);
       expect(barResult.data.datasets[0].data).toEqual([45000, 32000, 18000, 8500]);
       expect(barResult.options.scales).toBeDefined();
+      expect(barResult.options.scales?.x.title.text).toBe('category');
+      expect(barResult.options.scales?.y.title.text).toBe('total_revenue');
 
       // Pie → Table
       const tableResult = convertChartType(pieConfig, rows, 'table', meta) as TableResult;
