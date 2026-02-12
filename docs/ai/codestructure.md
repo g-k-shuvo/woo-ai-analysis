@@ -47,6 +47,14 @@ woo-ai-analytics/
 │   │   └── webpack.config.js          # @wordpress/scripts config
 │   ├── assets/                  # Built CSS, images
 │   ├── tests/                   # PHPUnit tests
+│   │   ├── bootstrap.php              # WP function stubs + WC class stubs
+│   │   └── Unit/
+│   │       ├── SettingsTest.php        # Settings AJAX + encryption tests (45 tests)
+│   │       ├── AjaxHandlerTest.php     # Chat AJAX + XSS prevention tests (59 tests)
+│   │       ├── OnboardingTest.php      # Onboarding AJAX + HTTP proxy tests (25 tests)
+│   │       ├── PluginTest.php          # Plugin singleton + hook registration tests [implemented]
+│   │       ├── AdminUITest.php         # Menu registration + asset enqueue tests [implemented]
+│   │       └── WebhooksTest.php        # Incremental sync + PII protection tests [implemented]
 │   └── composer.json
 ├── backend/                     # SaaS API server
 │   ├── src/
@@ -119,9 +127,25 @@ woo-ai-analytics/
 │   │   │   │   └── chartTypeConverter.test.ts # Chart type converter unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
+│   │   │   ├── routes/
+│   │   │   │   ├── health.test.ts          # Health route unit tests [implemented]
+│   │   │   │   ├── storeConnect.test.ts    # Store connect/status/disconnect unit tests [implemented]
+│   │   │   │   ├── onboardingStatus.test.ts # Onboarding status unit tests [implemented]
+│   │   │   │   ├── chatQuery.test.ts       # Chat query + suggestions unit tests [implemented]
+│   │   │   │   ├── syncOrders.test.ts      # Sync orders route unit tests [implemented]
+│   │   │   │   ├── syncProducts.test.ts    # Sync products route unit tests [implemented]
+│   │   │   │   ├── syncCustomers.test.ts   # Sync customers route unit tests [implemented]
+│   │   │   │   ├── syncCategories.test.ts  # Sync categories route unit tests [implemented]
+│   │   │   │   ├── syncWebhook.test.ts     # Sync webhook route unit tests [implemented]
+│   │   │   │   ├── syncStatus.test.ts      # Sync status route unit tests [implemented]
+│   │   │   │   └── syncErrors.test.ts      # Sync errors + retry route unit tests [implemented]
 │   │   │   ├── services/
 │   │   │   │   ├── chatService.test.ts   # Chat service unit tests (incl. chartImage) [implemented]
 │   │   │   │   └── chartRenderer.test.ts # Chart renderer unit tests [implemented]
+│   │   │   ├── utils/
+│   │   │   │   └── logger.test.ts         # Logger utility unit tests [implemented]
+│   │   │   ├── server/
+│   │   │   │   └── index.test.ts          # Server initialization wiring tests [implemented]
 │   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
 │   │   │   ├── aiPipeline.test.ts          # AI pipeline integration tests [implemented]

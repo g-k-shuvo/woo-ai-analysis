@@ -454,8 +454,306 @@ function is_admin(): bool {
 	return true;
 }
 
+// ─── WordPress Admin UI Function Stubs ──────────────────────────────────────────
+
+/**
+ * Stub: add_menu_page.
+ */
+function add_menu_page( string $page_title, string $menu_title, string $capability, string $menu_slug, callable|string $callback = '', string $icon_url = '', int|float $position = null ): string {
+	WP_Stubs::record( 'add_menu_page', array( $page_title, $menu_title, $capability, $menu_slug, $callback, $icon_url, $position ) );
+	return 'toplevel_page_' . $menu_slug;
+}
+
+/**
+ * Stub: add_submenu_page.
+ */
+function add_submenu_page( string $parent_slug, string $page_title, string $menu_title, string $capability, string $menu_slug, callable|string $callback = '', int|float $position = null ): string|false {
+	WP_Stubs::record( 'add_submenu_page', array( $parent_slug, $page_title, $menu_title, $capability, $menu_slug, $callback, $position ) );
+	return $parent_slug . '_page_' . $menu_slug;
+}
+
+/**
+ * Stub: wp_enqueue_script.
+ */
+function wp_enqueue_script( string $handle, string $src = '', array $deps = array(), string|bool|null $ver = false, array|bool $in_footer = false ): void {
+	WP_Stubs::record( 'wp_enqueue_script', array( $handle, $src, $deps, $ver, $in_footer ) );
+}
+
+/**
+ * Stub: wp_enqueue_style.
+ */
+function wp_enqueue_style( string $handle, string $src = '', array $deps = array(), string|bool|null $ver = false, string $media = 'all' ): void {
+	WP_Stubs::record( 'wp_enqueue_style', array( $handle, $src, $deps, $ver, $media ) );
+}
+
+/**
+ * Stub: wp_localize_script.
+ */
+function wp_localize_script( string $handle, string $object_name, array $l10n ): bool {
+	WP_Stubs::record( 'wp_localize_script', array( $handle, $object_name, $l10n ) );
+	return true;
+}
+
+/**
+ * Stub: wp_verify_nonce.
+ */
+function wp_verify_nonce( string $nonce, string|int $action = -1 ): int|false {
+	return 1;
+}
+
+/**
+ * Stub: esc_attr.
+ */
+function esc_attr( string $text ): string {
+	return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+}
+
+/**
+ * Stub: esc_url.
+ */
+function esc_url( string $url, ?array $protocols = null, string $context = 'display' ): string {
+	return filter_var( $url, FILTER_SANITIZE_URL ) ?: '';
+}
+
+// ─── WooCommerce Class Stubs ────────────────────────────────────────────────────
+
+/**
+ * Stub: WC_DateTime for date fields.
+ */
+class WC_DateTime extends \DateTime {
+	public function format( string $format ): string {
+		return parent::format( $format );
+	}
+}
+
+/**
+ * Stub: WC_Order for webhook tests.
+ */
+class WC_Order {
+	private int $id;
+	private string $status;
+	private float $total;
+	private float $subtotal;
+	private float $total_tax;
+	private float $shipping_total;
+	private float $discount_total;
+	private string $currency;
+	private int $customer_id;
+	private string $payment_method;
+	private ?WC_DateTime $date_created;
+	private ?WC_DateTime $date_modified;
+	/** @var array<string, string> */
+	private array $coupon_codes = array();
+	/** @var WC_Order_Item_Product[] */
+	private array $items = array();
+
+	public function __construct( array $data = array() ) {
+		$this->id              = $data['id'] ?? 0;
+		$this->status          = $data['status'] ?? 'processing';
+		$this->total           = $data['total'] ?? 0.0;
+		$this->subtotal        = $data['subtotal'] ?? 0.0;
+		$this->total_tax       = $data['total_tax'] ?? 0.0;
+		$this->shipping_total  = $data['shipping_total'] ?? 0.0;
+		$this->discount_total  = $data['discount_total'] ?? 0.0;
+		$this->currency        = $data['currency'] ?? 'USD';
+		$this->customer_id     = $data['customer_id'] ?? 0;
+		$this->payment_method  = $data['payment_method'] ?? 'stripe';
+		$this->date_created    = $data['date_created'] ?? null;
+		$this->date_modified   = $data['date_modified'] ?? null;
+		$this->coupon_codes    = $data['coupon_codes'] ?? array();
+		$this->items           = $data['items'] ?? array();
+	}
+
+	public function get_id(): int { return $this->id; }
+	public function get_status(): string { return $this->status; }
+	public function get_total(): float { return $this->total; }
+	public function get_subtotal(): float { return $this->subtotal; }
+	public function get_total_tax(): float { return $this->total_tax; }
+	public function get_shipping_total(): float { return $this->shipping_total; }
+	public function get_discount_total(): float { return $this->discount_total; }
+	public function get_currency(): string { return $this->currency; }
+	public function get_customer_id(): int { return $this->customer_id; }
+	public function get_payment_method(): string { return $this->payment_method; }
+	public function get_date_created(): ?WC_DateTime { return $this->date_created; }
+	public function get_date_modified(): ?WC_DateTime { return $this->date_modified; }
+	public function get_coupon_codes(): array { return $this->coupon_codes; }
+	public function get_items(): array { return $this->items; }
+}
+
+/**
+ * Stub: WC_Order_Item_Product for order item data.
+ */
+class WC_Order_Item_Product {
+	private int $product_id;
+	private string $name;
+	private int $quantity;
+	private float $subtotal;
+	private float $total;
+	private ?WC_Product $product;
+
+	public function __construct( array $data = array() ) {
+		$this->product_id = $data['product_id'] ?? 0;
+		$this->name       = $data['name'] ?? '';
+		$this->quantity   = $data['quantity'] ?? 1;
+		$this->subtotal   = $data['subtotal'] ?? 0.0;
+		$this->total      = $data['total'] ?? 0.0;
+		$this->product    = $data['product'] ?? null;
+	}
+
+	public function get_product_id(): int { return $this->product_id; }
+	public function get_name(): string { return $this->name; }
+	public function get_quantity(): int { return $this->quantity; }
+	public function get_subtotal(): float { return $this->subtotal; }
+	public function get_total(): float { return $this->total; }
+	public function get_product(): ?WC_Product { return $this->product; }
+}
+
+/**
+ * Stub: WC_Product for product and order item tests.
+ */
+class WC_Product {
+	private int $id;
+	private string $name;
+	private string $sku;
+	private float $price;
+	private float $regular_price;
+	private string $sale_price;
+	private array $category_ids;
+	private ?int $stock_quantity;
+	private string $stock_status;
+	private string $status;
+	private string $type;
+	private ?WC_DateTime $date_created;
+	private ?WC_DateTime $date_modified;
+
+	public function __construct( array $data = array() ) {
+		$this->id             = $data['id'] ?? 0;
+		$this->name           = $data['name'] ?? '';
+		$this->sku            = $data['sku'] ?? '';
+		$this->price          = $data['price'] ?? 0.0;
+		$this->regular_price  = $data['regular_price'] ?? 0.0;
+		$this->sale_price     = $data['sale_price'] ?? '';
+		$this->category_ids   = $data['category_ids'] ?? array();
+		$this->stock_quantity = $data['stock_quantity'] ?? null;
+		$this->stock_status   = $data['stock_status'] ?? 'instock';
+		$this->status         = $data['status'] ?? 'publish';
+		$this->type           = $data['type'] ?? 'simple';
+		$this->date_created   = $data['date_created'] ?? null;
+		$this->date_modified  = $data['date_modified'] ?? null;
+	}
+
+	public function get_id(): int { return $this->id; }
+	public function get_name(): string { return $this->name; }
+	public function get_sku(): string { return $this->sku; }
+	public function get_price(): float { return $this->price; }
+	public function get_regular_price(): float { return $this->regular_price; }
+	public function get_sale_price(): string { return $this->sale_price; }
+	public function get_category_ids(): array { return $this->category_ids; }
+	public function get_stock_quantity(): ?int { return $this->stock_quantity; }
+	public function get_stock_status(): string { return $this->stock_status; }
+	public function get_status(): string { return $this->status; }
+	public function get_type(): string { return $this->type; }
+	public function get_date_created(): ?WC_DateTime { return $this->date_created; }
+	public function get_date_modified(): ?WC_DateTime { return $this->date_modified; }
+}
+
+/**
+ * Stub: WC_Customer for customer webhook tests.
+ */
+class WC_Customer {
+	private int $id;
+	private string $email;
+	private string $display_name;
+	private float $total_spent;
+	private int $order_count;
+	private ?WC_DateTime $date_created;
+
+	public function __construct( int|array $id_or_data = 0 ) {
+		if ( is_array( $id_or_data ) ) {
+			$data = $id_or_data;
+		} else {
+			// Look up from stubs registry.
+			$data = WP_Stubs::$overrides['wc_customers'][ $id_or_data ] ?? array( 'id' => $id_or_data );
+		}
+		$this->id           = $data['id'] ?? 0;
+		$this->email        = $data['email'] ?? '';
+		$this->display_name = $data['display_name'] ?? '';
+		$this->total_spent  = $data['total_spent'] ?? 0.0;
+		$this->order_count  = $data['order_count'] ?? 0;
+		$this->date_created = $data['date_created'] ?? null;
+	}
+
+	public function get_id(): int { return $this->id; }
+	public function get_email(): string { return $this->email; }
+	public function get_display_name(): string { return $this->display_name; }
+	public function get_total_spent(): float { return $this->total_spent; }
+	public function get_order_count(): int { return $this->order_count; }
+	public function get_date_created(): ?WC_DateTime { return $this->date_created; }
+}
+
+/**
+ * Stub: WP_Term for category webhook tests.
+ */
+class WP_Term {
+	public int $term_id;
+	public string $name;
+	public int $parent;
+	public int $count;
+	public string $taxonomy;
+
+	public function __construct( array $data = array() ) {
+		$this->term_id  = $data['term_id'] ?? 0;
+		$this->name     = $data['name'] ?? '';
+		$this->parent   = $data['parent'] ?? 0;
+		$this->count    = $data['count'] ?? 0;
+		$this->taxonomy = $data['taxonomy'] ?? 'product_cat';
+	}
+}
+
+/**
+ * Stub: get_term.
+ */
+function get_term( int $term_id, string $taxonomy = '' ): ?WP_Term {
+	WP_Stubs::record( 'get_term', array( $term_id, $taxonomy ) );
+
+	if ( isset( WP_Stubs::$overrides['get_term'] ) ) {
+		return ( WP_Stubs::$overrides['get_term'] )( $term_id, $taxonomy );
+	}
+
+	return null;
+}
+
+/**
+ * Stub: wc_get_order.
+ */
+function wc_get_order( int $order_id ): WC_Order|false {
+	WP_Stubs::record( 'wc_get_order', array( $order_id ) );
+
+	if ( isset( WP_Stubs::$overrides['wc_get_order'] ) ) {
+		return ( WP_Stubs::$overrides['wc_get_order'] )( $order_id );
+	}
+
+	return false;
+}
+
+/**
+ * Stub: wc_get_product.
+ */
+function wc_get_product( int $product_id ): WC_Product|false {
+	WP_Stubs::record( 'wc_get_product', array( $product_id ) );
+
+	if ( isset( WP_Stubs::$overrides['wc_get_product'] ) ) {
+		return ( WP_Stubs::$overrides['wc_get_product'] )( $product_id );
+	}
+
+	return false;
+}
+
 // ─── Load Plugin Classes ────────────────────────────────────────────────────────
 
 require_once WAA_PLUGIN_DIR . 'includes/class-settings.php';
 require_once WAA_PLUGIN_DIR . 'includes/class-ajax-handler.php';
 require_once WAA_PLUGIN_DIR . 'includes/class-onboarding.php';
+require_once WAA_PLUGIN_DIR . 'includes/class-admin-ui.php';
+require_once WAA_PLUGIN_DIR . 'includes/class-webhooks.php';
+require_once WAA_PLUGIN_DIR . 'includes/class-plugin.php';
