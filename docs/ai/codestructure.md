@@ -31,9 +31,13 @@ woo-ai-analytics/
 │   │   │   │   ├── ChatInput.jsx      # Message input + send + suggested questions [implemented]
 │   │   │   │   ├── ChartRenderer.jsx  # Chart.js interactive chart rendering (bar/line/pie/doughnut) [implemented]
 │   │   │   │   ├── TableRenderer.jsx  # Data table rendering from TableResult [implemented]
+│   │   │   │   ├── ChatMessage.jsx    # Individual message component with chart type switching [implemented]
+│   │   │   │   ├── ChartTypeSelector.jsx # Chart type toolbar (bar/line/pie/doughnut/table) [implemented]
 │   │   │   │   ├── Dashboard.jsx      # Saved charts grid
 │   │   │   │   ├── Settings.jsx       # Connection settings page
 │   │   │   │   └── OnboardingWizard.jsx
+│   │   │   ├── utils/
+│   │   │   │   └── convertChartType.js # Client-side chart type converter [implemented]
 │   │   │   └── hooks/
 │   │   │       ├── useChat.js         # Chat state management
 │   │   │       └── useSyncStatus.js   # Sync progress polling
@@ -86,7 +90,8 @@ woo-ai-analytics/
 │   │       ├── productQueries.ts    # Product query service (top sellers, category performance, stock) [implemented]
 │   │       ├── customerQueries.ts  # Customer query service (new vs returning, top spenders, CLV) [implemented]
 │   │       ├── orderQueries.ts     # Order query service (count, AOV, status breakdown, recent) [implemented]
-│   │       └── chartSpec.ts          # AI → Chart.js config converter (ChartSpec + rows → ChartConfiguration) [implemented]
+│   │       ├── chartSpec.ts          # AI → Chart.js config converter (ChartSpec + rows → ChartConfiguration) [implemented]
+│   │       └── chartTypeConverter.ts # Chart type switcher (bar↔line↔pie↔doughnut↔table) [implemented]
 │   ├── charts/                        # (unused — chart rendering lives in src/services/chartRenderer.ts)
 │   ├── db/
 │   │   ├── readonlyConnection.ts     # Read-only Knex pool for AI queries (SELECT-only, 5s timeout) [implemented]
@@ -108,7 +113,8 @@ woo-ai-analytics/
 │   │   │   │   ├── productQueries.test.ts # Product query service unit tests [implemented]
 │   │   │   │   ├── customerQueries.test.ts # Customer query service unit tests [implemented]
 │   │   │   │   ├── orderQueries.test.ts  # Order query service unit tests [implemented]
-│   │   │   │   └── chartSpec.test.ts    # Chart spec converter unit tests [implemented]
+│   │   │   │   ├── chartSpec.test.ts    # Chart spec converter unit tests [implemented]
+│   │   │   │   └── chartTypeConverter.test.ts # Chart type converter unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   ├── services/
@@ -125,6 +131,7 @@ woo-ai-analytics/
 │   │   │   ├── orderQueries.test.ts     # Order query integration tests [implemented]
 │   │   │   ├── chartSpec.test.ts       # Chart spec converter integration tests [implemented]
 │   │   │   ├── chartRenderer.test.ts  # Server-side chart renderer integration tests [implemented]
+│   │   │   ├── chartTypeConverter.test.ts # Chart type converter integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev

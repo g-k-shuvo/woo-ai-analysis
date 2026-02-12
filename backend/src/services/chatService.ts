@@ -13,7 +13,7 @@ import type { AIQueryPipeline } from '../ai/pipeline.js';
 import type { QueryExecutor } from '../ai/queryExecutor.js';
 import type { ChartRenderer } from './chartRenderer.js';
 import { toChartConfig } from '../ai/chartSpec.js';
-import type { ChartSpecResult } from '../ai/types.js';
+import type { ChartMeta, ChartSpecResult } from '../ai/types.js';
 import { ValidationError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 
@@ -32,6 +32,7 @@ export interface ChatResponse {
   chartSpec: ChatSpecSummary | null;
   chartConfig: ChartSpecResult | null;
   chartImage: string | null;
+  chartMeta: ChartMeta | null;
 }
 
 export interface ChatSpecSummary {
@@ -82,6 +83,16 @@ export function createChatService(deps: ChatServiceDeps) {
       ? { type: queryResult.chartSpec.type, title: queryResult.chartSpec.title }
       : null;
 
+    // Build chart meta for frontend chart type switching
+    const chartMeta: ChartMeta | null = queryResult.chartSpec
+      ? {
+          dataKey: queryResult.chartSpec.dataKey,
+          labelKey: queryResult.chartSpec.labelKey,
+          xLabel: queryResult.chartSpec.xLabel,
+          yLabel: queryResult.chartSpec.yLabel,
+        }
+      : null;
+
     const response: ChatResponse = {
       answer: queryResult.explanation,
       sql: queryResult.sql,
@@ -91,6 +102,7 @@ export function createChatService(deps: ChatServiceDeps) {
       chartSpec: chartSpecSummary,
       chartConfig,
       chartImage,
+      chartMeta,
     };
 
     logger.info(

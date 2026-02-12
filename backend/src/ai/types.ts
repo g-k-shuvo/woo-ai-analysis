@@ -76,3 +76,10 @@ export interface ChartRenderOptions {
   height?: number;
   backgroundColour?: string;
 }
+
+export interface ChartMeta {
+  dataKey: string;
+  labelKey: string;
+  xLabel?: string;
+  yLabel?: string;
+}

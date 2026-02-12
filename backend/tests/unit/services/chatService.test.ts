@@ -483,6 +483,7 @@ describe('chatService', () => {
       expect(result).toHaveProperty('chartSpec');
       expect(result).toHaveProperty('chartConfig');
       expect(result).toHaveProperty('chartImage');
+      expect(result).toHaveProperty('chartMeta');
     });
 
     it('returns rows from query executor', async () => {
@@ -678,6 +679,100 @@ describe('chatService', () => {
       const result = await chatService.ask(STORE_ID, 'Top customers');
 
       expect(result.chartSpec).toEqual({ type: 'table', title: 'Top Customers' });
+    });
+  });
+
+  // ── ask() — chartMeta ─────────────────────────────────────────
+
+  describe('ask() — chartMeta', () => {
+    it('returns chartMeta with dataKey and labelKey when chartSpec is present', async () => {
+      const chartSpec = makeChartSpec();
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Revenue by product');
+
+      expect(result.chartMeta).toEqual({
+        dataKey: 'revenue',
+        labelKey: 'name',
+        xLabel: 'Product',
+        yLabel: 'Revenue ($)',
+      });
+    });
+
+    it('returns null chartMeta when no chartSpec', async () => {
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec: null }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Total revenue?');
+
+      expect(result.chartMeta).toBeNull();
+    });
+
+    it('includes xLabel and yLabel when present in chartSpec', async () => {
+      const chartSpec: ChartSpec = {
+        type: 'line',
+        title: 'Revenue Over Time',
+        xLabel: 'Date',
+        yLabel: 'Revenue',
+        dataKey: 'total',
+        labelKey: 'date',
+      };
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Revenue over time');
+
+      expect(result.chartMeta).toEqual({
+        dataKey: 'total',
+        labelKey: 'date',
+        xLabel: 'Date',
+        yLabel: 'Revenue',
+      });
+    });
+
+    it('omits xLabel/yLabel when not in chartSpec', async () => {
+      const chartSpec: ChartSpec = {
+        type: 'pie',
+        title: 'Revenue by Category',
+        dataKey: 'revenue',
+        labelKey: 'category',
+      };
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Revenue by category');
+
+      expect(result.chartMeta).toEqual({
+        dataKey: 'revenue',
+        labelKey: 'category',
+        xLabel: undefined,
+        yLabel: undefined,
+      });
     });
   });
 

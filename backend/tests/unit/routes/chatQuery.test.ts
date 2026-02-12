@@ -29,6 +29,7 @@ function makeResponse(overrides: Partial<ChatResponse> = {}): ChatResponse {
     chartSpec: null,
     chartConfig: null,
     chartImage: null,
+    chartMeta: null,
     ...overrides,
   };
 }

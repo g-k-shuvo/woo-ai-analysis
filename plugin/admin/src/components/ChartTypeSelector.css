@@ -1,0 +1,51 @@
+.waa-chart-type-selector {
+	display: flex;
+	gap: 2px;
+	margin-top: 10px;
+	margin-bottom: 4px;
+	background: #f0f0f1;
+	border-radius: 4px;
+	padding: 2px;
+}
+
+.waa-chart-type-selector__btn {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 10px;
+	border: none;
+	border-radius: 3px;
+	background: transparent;
+	color: #646970;
+	font-size: 12px;
+	cursor: pointer;
+	transition: background-color 0.15s, color 0.15s;
+	line-height: 1;
+}
+
+.waa-chart-type-selector__btn:hover {
+	background: #e0e0e0;
+	color: #1d2327;
+}
+
+.waa-chart-type-selector__btn--active {
+	background: #fff;
+	color: #2271b1;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+	font-weight: 600;
+}
+
+.waa-chart-type-selector__btn--active:hover {
+	background: #fff;
+	color: #2271b1;
+}
+
+.waa-chart-type-selector__icon {
+	font-size: 14px;
+	line-height: 1;
+}
+
+.waa-chart-type-selector__label {
+	font-size: 11px;
+	white-space: nowrap;
+}
