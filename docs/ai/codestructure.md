@@ -34,7 +34,8 @@ woo-ai-analytics/
 │   │   │   │   ├── TableRenderer.jsx  # Data table rendering from TableResult [implemented]
 │   │   │   │   ├── ChatMessage.jsx    # Individual message component with chart type switching [implemented]
 │   │   │   │   ├── ChartTypeSelector.jsx # Chart type toolbar (bar/line/pie/doughnut/table) [implemented]
-│   │   │   │   ├── Dashboard.jsx      # Saved charts grid
+│   │   │   │   ├── Dashboard.jsx      # Saved charts grid + PDF export button [implemented]
+│   │   │   │   ├── ExportPdfButton.jsx # PDF report export button [implemented]
 │   │   │   │   ├── Settings.jsx       # Connection settings page
 │   │   │   │   └── OnboardingWizard.jsx  # 4-step onboarding wizard [implemented]
 │   │   │   ├── utils/
@@ -54,7 +55,8 @@ woo-ai-analytics/
 │   │       ├── OnboardingTest.php      # Onboarding AJAX + HTTP proxy tests (25 tests)
 │   │       ├── PluginTest.php          # Plugin singleton + hook registration tests [implemented]
 │   │       ├── AdminUITest.php         # Menu registration + asset enqueue tests [implemented]
-│   │       └── WebhooksTest.php        # Incremental sync + PII protection tests [implemented]
+│   │       ├── WebhooksTest.php        # Incremental sync + PII protection tests [implemented]
+│   │       └── ReportAjaxTest.php     # PDF report AJAX handler tests [implemented]
 │   └── composer.json
 ├── backend/                     # SaaS API server
 │   ├── src/
@@ -73,8 +75,11 @@ woo-ai-analytics/
 │   │   │   │   └── errors.ts         # GET /api/sync/errors, POST /api/sync/retry/:syncLogId
 │   │   │   ├── chat/
 │   │   │   │   └── query.ts          # POST /api/chat/query
-│   │   │   └── dashboards/
-│   │   │       └── index.ts          # CRUD for saved charts
+│   │   │   ├── dashboards/
+│   │   │   │   ├── charts.ts         # CRUD for saved charts [implemented]
+│   │   │   │   └── layout.ts         # Grid layout update [implemented]
+│   │   │   └── reports/
+│   │   │       └── index.ts          # PDF report generate, list, download, delete [implemented]
 │   │   ├── middleware/
 │   │   │   ├── auth.ts               # API key validation (Bearer token, bcrypt compare)
 │   │   │   ├── errorHandler.ts       # Global error handler + 404
@@ -84,7 +89,10 @@ woo-ai-analytics/
 │   │   │   ├── syncService.ts        # Orders/Products/Customers/Categories batch upsert (ON CONFLICT merge, sync logs)
 │   │   │   ├── syncRetryService.ts   # Retry logic, exponential backoff, stale sync detection
 │   │   │   ├── chatService.ts        # Orchestrates AI pipeline → executor → chart spec → chart image [implemented]
-│   │   │   └── chartRenderer.ts      # Server-side Chart.js → PNG rendering via chartjs-node-canvas [implemented]
+│   │   │   ├── chartRenderer.ts      # Server-side Chart.js → PNG rendering via chartjs-node-canvas [implemented]
+│   │   │   ├── savedChartsService.ts # Dashboard saved charts CRUD [implemented]
+│   │   │   ├── dashboardLayoutService.ts # Grid layout update [implemented]
+│   │   │   └── pdfReportService.ts   # PDF report generation via PDFKit + chartRenderer [implemented]
 │   │   ├── utils/
 │   │   │   ├── errors.ts             # Custom error classes
 │   │   │   └── logger.ts             # Structured logging

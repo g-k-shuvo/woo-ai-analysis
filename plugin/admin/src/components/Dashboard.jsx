@@ -3,6 +3,7 @@ import { __ } from '@wordpress/i18n';
 import PropTypes from 'prop-types';
 import useDashboard from '../hooks/useDashboard';
 import DashboardGrid from './DashboardGrid';
+import ExportPdfButton from './ExportPdfButton';
 
 export default function Dashboard( { onNavigateToChat } ) {
 	const {
@@ -64,15 +65,20 @@ export default function Dashboard( { onNavigateToChat } ) {
 			<div className="waa-dashboard">
 				<div className="waa-dashboard__header">
 					<h1>{ __( 'Dashboard', 'woo-ai-analytics' ) }</h1>
-					{ onNavigateToChat && (
-						<button
-							type="button"
-							className="button button-primary"
-							onClick={ onNavigateToChat }
-						>
-							{ __( 'Ask a Question', 'woo-ai-analytics' ) }
-						</button>
-					) }
+					<div className="waa-dashboard__actions">
+						{ ! loading && charts.length > 0 && (
+							<ExportPdfButton />
+						) }
+						{ onNavigateToChat && (
+							<button
+								type="button"
+								className="button button-primary"
+								onClick={ onNavigateToChat }
+							>
+								{ __( 'Ask a Question', 'woo-ai-analytics' ) }
+							</button>
+						) }
+					</div>
 				</div>
 
 				{ loading && (

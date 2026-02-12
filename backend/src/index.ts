@@ -29,6 +29,9 @@ import { dashboardChartsRoutes } from './routes/dashboards/charts.js';
 import { dashboardLayoutRoutes } from './routes/dashboards/layout.js';
 import { createSavedChartsService } from './services/savedChartsService.js';
 import { createDashboardLayoutService } from './services/dashboardLayoutService.js';
+import { createPdfReportService } from './services/pdfReportService.js';
+import { reportRoutes } from './routes/reports/index.js';
+import { createChartRenderer } from './services/chartRenderer.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -92,6 +95,10 @@ const chatService = createChatService({ aiPipeline, queryExecutor });
 const savedChartsService = createSavedChartsService({ db });
 const dashboardLayoutService = createDashboardLayoutService({ db });
 
+// Report services
+const chartRendererForReports = createChartRenderer();
+const pdfReportService = createPdfReportService({ db, chartRenderer: chartRendererForReports });
+
 // Rate limiter
 const rateLimiter = createRateLimiter({
   redis,
@@ -152,6 +159,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => dashboardLayoutRoutes(instance, { dashboardLayoutService }),
+);
+
+await fastify.register(
+  async (instance) => reportRoutes(instance, { pdfReportService }),
 );
 
 // Graceful shutdown

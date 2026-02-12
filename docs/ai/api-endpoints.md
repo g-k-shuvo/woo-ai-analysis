@@ -57,12 +57,13 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 | DELETE | `/api/dashboards/charts/:id` | Delete saved chart [implemented] |
 | PUT | `/api/dashboards/grid-layout` | Update chart grid positions. Body: `{ items: [{ id, gridX, gridY, gridW, gridH }] }` [implemented] |
 
-### Reports (Phase 2)
+### Reports
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/reports/generate` | Generate PDF/CSV report |
-| GET | `/api/reports` | List generated reports |
-| GET | `/api/reports/:id/download` | Download report file |
+| POST | `/api/reports/generate` | Generate PDF report from saved dashboard charts. Body: `{ title }` [implemented] |
+| GET | `/api/reports` | List generated reports for the store [implemented] |
+| GET | `/api/reports/:id/download` | Download PDF report file (application/pdf) [implemented] |
+| DELETE | `/api/reports/:id` | Delete a generated report [implemented] |
 
 ## Plugin-Side Endpoints (WordPress AJAX)
 
@@ -84,6 +85,9 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_list_charts` | Proxies to GET /api/dashboards/charts — lists saved charts (nonce required) [implemented] |
 | `waa_delete_chart` | Proxies to DELETE /api/dashboards/charts/:id — removes saved chart (nonce required) [implemented] |
 | `waa_update_grid_layout` | Proxies to PUT /api/dashboards/grid-layout — updates chart grid positions (nonce required) [implemented] |
+| `waa_generate_report` | Proxies to POST /api/reports/generate — generates PDF report (nonce required) [implemented] |
+| `waa_list_reports` | Proxies to GET /api/reports — lists generated reports (nonce required) [implemented] |
+| `waa_download_report` | Proxies to GET /api/reports/:id/download — downloads PDF (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

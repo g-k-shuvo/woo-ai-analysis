@@ -172,6 +172,14 @@ function sanitize_text_field( string $str ): string {
 }
 
 /**
+ * Stub: sanitize_file_name.
+ */
+function sanitize_file_name( string $filename ): string {
+	// Simple stub: remove characters that are not alphanumeric, dash, underscore, or dot.
+	return preg_replace( '/[^a-zA-Z0-9._-]/', '', $filename );
+}
+
+/**
  * Stub: esc_url_raw.
  */
 function esc_url_raw( string $url ): string {

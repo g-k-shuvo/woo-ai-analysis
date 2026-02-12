@@ -53,7 +53,7 @@
 ## Phase 2: Enhanced (Month 4–6)
 - [x] **6.1** Save chart / pin to dashboard
 - [x] **6.2** Custom dashboard with drag-and-drop layout
-- [ ] **6.3** PDF report export
+- [x] **6.3** PDF report export
 - [ ] **6.4** CSV export
 - [ ] **6.5** Scheduled insights (daily/weekly email)
 - [ ] **6.6** Predictive analytics (revenue forecast)
