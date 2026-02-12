@@ -22,6 +22,8 @@ import { logger } from '../utils/logger.js';
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 400;
 const DEFAULT_BACKGROUND = 'white';
+const VALID_LEGEND_POSITIONS = ['top', 'left', 'bottom', 'right'] as const;
+type LegendPosition = typeof VALID_LEGEND_POSITIONS[number];
 
 /**
  * Type guard: returns true if the ChartSpecResult is a TableResult.
@@ -42,13 +44,15 @@ function toNativeConfig(config: ChartConfiguration): NativeChartConfiguration {
     options: {
       ...config.options,
       responsive: false,
-      animation: false as unknown as undefined,
+      animation: false,
       plugins: {
         ...config.options.plugins,
         legend: config.options.plugins.legend
           ? {
               display: config.options.plugins.legend.display,
-              position: config.options.plugins.legend.position as 'right' | 'top' | 'bottom' | 'left',
+              position: (VALID_LEGEND_POSITIONS as readonly string[]).includes(config.options.plugins.legend.position)
+                ? config.options.plugins.legend.position as LegendPosition
+                : 'top',
             }
           : undefined,
       },

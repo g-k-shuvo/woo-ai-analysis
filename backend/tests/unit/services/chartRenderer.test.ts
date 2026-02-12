@@ -440,5 +440,20 @@ describe('chartRenderer', () => {
       expect(legend.display).toBe(true);
       expect(legend.position).toBe('right');
     });
+
+    it('falls back to top for invalid legend position', async () => {
+      const renderer = createChartRenderer();
+      const config = makePieConfig();
+      // Force an invalid position to test the fallback
+      (config.options.plugins.legend as { display: boolean; position: string }).position = 'invalid-pos';
+
+      await renderer.renderToBuffer(config);
+
+      const passedConfig = (mockRenderToBuffer.mock.calls as unknown[][])[0][0] as Record<string, unknown>;
+      const options = passedConfig.options as Record<string, unknown>;
+      const plugins = options.plugins as Record<string, unknown>;
+      const legend = plugins.legend as Record<string, unknown>;
+      expect(legend.position).toBe('top');
+    });
   });
 });
