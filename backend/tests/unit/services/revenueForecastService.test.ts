@@ -68,6 +68,8 @@ interface MockQueryBuilder {
   del: jest.Mock<() => Promise<number>>;
   returning: jest.Mock<() => Promise<unknown[]>>;
   groupByRaw: jest.Mock<() => MockQueryBuilder>;
+  timeout: jest.Mock<() => MockQueryBuilder>;
+  limit: jest.Mock<() => MockQueryBuilder>;
   raw: jest.Mock<() => unknown>;
 }
 
@@ -83,13 +85,26 @@ function createMockDb() {
     del: jest.fn() as MockQueryBuilder['del'],
     returning: jest.fn() as MockQueryBuilder['returning'],
     groupByRaw: jest.fn().mockReturnThis() as MockQueryBuilder['groupByRaw'],
+    timeout: jest.fn().mockReturnThis() as MockQueryBuilder['timeout'],
+    limit: jest.fn().mockReturnThis() as MockQueryBuilder['limit'],
     raw: jest.fn((sql: string) => sql) as MockQueryBuilder['raw'],
   };
 
+  // The db function returns the builder for table queries
   const db = jest.fn().mockReturnValue(builder) as unknown as jest.Mock & {
     raw: jest.Mock<() => unknown>;
+    transaction: jest.Mock<() => Promise<unknown>>;
   };
   (db as unknown as Record<string, unknown>).raw = jest.fn((sql: string) => sql);
+
+  // transaction: execute the callback with a trx that behaves like db
+  (db as unknown as Record<string, unknown>).transaction = jest.fn(
+    async (cb: (trx: unknown) => Promise<unknown>) => {
+      // trx acts as a function returning the same builder
+      const trx = jest.fn().mockReturnValue(builder);
+      return cb(trx);
+    },
+  );
 
   return { db, builder };
 }
@@ -106,6 +121,8 @@ function createMockReadonlyDb() {
     del: jest.fn() as MockQueryBuilder['del'],
     returning: jest.fn() as MockQueryBuilder['returning'],
     groupByRaw: jest.fn().mockReturnThis() as MockQueryBuilder['groupByRaw'],
+    timeout: jest.fn().mockReturnThis() as MockQueryBuilder['timeout'],
+    limit: jest.fn().mockReturnThis() as MockQueryBuilder['limit'],
     raw: jest.fn((sql: string) => sql) as MockQueryBuilder['raw'],
   };
 
@@ -148,11 +165,11 @@ describe('revenueForecastService', () => {
 
   describe('generateForecast()', () => {
     it('generates a forecast and returns response', async () => {
-      // count check
-      builder.first.mockResolvedValueOnce({ count: '0' });
-      // daily revenue query
+      // daily revenue query (runs first, before transaction)
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(30));
-      // insert
+      // count check (inside transaction)
+      builder.first.mockResolvedValueOnce({ count: '0' });
+      // insert (inside transaction)
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -191,8 +208,8 @@ describe('revenueForecastService', () => {
     });
 
     it('accepts daysAhead=7', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([
         makeForecastRecord({ days_ahead: 7 }),
       ]);
@@ -204,8 +221,8 @@ describe('revenueForecastService', () => {
     });
 
     it('accepts daysAhead=14', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([
         makeForecastRecord({ days_ahead: 14 }),
       ]);
@@ -217,6 +234,9 @@ describe('revenueForecastService', () => {
     });
 
     it('throws ValidationError when max forecasts reached', async () => {
+      // Readonly query runs first (needs sufficient data to pass validation)
+      roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      // Count check inside transaction returns 10
       builder.first.mockResolvedValueOnce({ count: '10' });
 
       const service = makeService();
@@ -227,7 +247,6 @@ describe('revenueForecastService', () => {
     });
 
     it('throws ValidationError when insufficient historical data', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(3));
 
       const service = makeService();
@@ -238,7 +257,6 @@ describe('revenueForecastService', () => {
     });
 
     it('throws ValidationError when no historical data', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce([]);
 
       const service = makeService();
@@ -249,8 +267,8 @@ describe('revenueForecastService', () => {
     });
 
     it('filters orders by store_id', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -260,8 +278,8 @@ describe('revenueForecastService', () => {
     });
 
     it('filters by completed and processing order statuses', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -273,9 +291,9 @@ describe('revenueForecastService', () => {
       ]);
     });
 
-    it('inserts with correct store_id', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
+    it('inserts with correct store_id inside transaction', async () => {
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -289,9 +307,20 @@ describe('revenueForecastService', () => {
       );
     });
 
-    it('logs on successful generation', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
+    it('uses a transaction for count check and insert', async () => {
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
+      builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
+
+      const service = makeService();
+      await service.generateForecast(STORE_ID, { daysAhead: 30 });
+
+      expect((db as unknown as Record<string, jest.Mock>).transaction).toHaveBeenCalled();
+    });
+
+    it('logs on successful generation', async () => {
+      roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const { logger: mockLogger } = await import('../../../src/utils/logger.js');
@@ -306,20 +335,20 @@ describe('revenueForecastService', () => {
     });
 
     it('checks max forecast count with store_id filter', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
       await service.generateForecast(STORE_ID, { daysAhead: 30 });
 
-      // First call to builder.where should be the count check with store_id
+      // builder.where is called inside the transaction for the count check
       expect(builder.where).toHaveBeenCalledWith({ store_id: STORE_ID });
     });
 
     it('stores data_points and summary as JSON strings', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -331,8 +360,8 @@ describe('revenueForecastService', () => {
     });
 
     it('parses JSON data_points from string', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -343,8 +372,8 @@ describe('revenueForecastService', () => {
     });
 
     it('parses JSON summary from string', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
 
       const service = makeService();
@@ -355,8 +384,8 @@ describe('revenueForecastService', () => {
     });
 
     it('handles data_points already as object (not string)', async () => {
-      builder.first.mockResolvedValueOnce({ count: '0' });
       roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
       builder.returning.mockResolvedValueOnce([
         makeForecastRecord({
           data_points: [{ date: '2026-02-13', predicted: 100, type: 'forecast' }],
@@ -369,6 +398,17 @@ describe('revenueForecastService', () => {
 
       expect(result.dataPoints[0].date).toBe('2026-02-13');
       expect(result.summary.trend).toBe('flat');
+    });
+
+    it('applies timeout to readonly query', async () => {
+      roBuilder.select.mockResolvedValueOnce(makeDailyRevenueRows(10));
+      builder.first.mockResolvedValueOnce({ count: '0' });
+      builder.returning.mockResolvedValueOnce([makeForecastRecord()]);
+
+      const service = makeService();
+      await service.generateForecast(STORE_ID, { daysAhead: 30 });
+
+      expect(roBuilder.timeout).toHaveBeenCalledWith(5000, { cancel: true });
     });
   });
 

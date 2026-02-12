@@ -122,6 +122,9 @@ function createFakeDb() {
         countMode = true;
         return builder;
       },
+      limit() {
+        return builder;
+      },
       select(..._cols: unknown[]) {
         return Promise.resolve(filterRows());
       },
@@ -172,9 +175,21 @@ function createFakeDb() {
     return createBuilder(tableName);
   } as unknown as ((tableName: string) => Record<string, unknown>) & {
     raw: (sql: string) => string;
+    transaction: (cb: (trx: unknown) => Promise<unknown>) => Promise<unknown>;
   };
 
   fakeDb.raw = (sql: string) => sql;
+
+  // transaction: pass a trx that behaves like fakeDb itself
+  fakeDb.transaction = async (cb: (trx: unknown) => Promise<unknown>) => {
+    const trx = function (tableName: string) {
+      return createBuilder(tableName);
+    } as unknown as ((tableName: string) => Record<string, unknown>) & {
+      raw: (sql: string) => string;
+    };
+    trx.raw = (sql: string) => sql;
+    return cb(trx);
+  };
 
   return fakeDb;
 }
@@ -212,6 +227,9 @@ function createFakeReadonlyDb() {
         return builder;
       },
       orderBy() {
+        return builder;
+      },
+      timeout() {
         return builder;
       },
     };

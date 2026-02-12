@@ -78,7 +78,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	private function make_forecast_data( array $overrides = array() ): array {
 		return array_merge(
 			array(
-				'id'             => 'forecast-abc-123',
+				'id'             => 'aabb0000-1111-2222-3333-444455556666',
 				'daysAhead'      => 30,
 				'historicalDays' => 90,
 				'dataPoints'     => array(
@@ -267,7 +267,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 		$result = $this->call_handler( 'handle_generate_forecast' );
 
 		$this->assertTrue( $result->success );
-		$this->assertSame( 'forecast-abc-123', $result->data['id'] );
+		$this->assertSame( 'aabb0000-1111-2222-3333-444455556666', $result->data['id'] );
 		$this->assertSame( 30, $result->data['daysAhead'] );
 		$this->assertSame( 90, $result->data['historicalDays'] );
 		$this->assertIsArray( $result->data['dataPoints'] );
@@ -342,7 +342,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 				'data'    => array(
 					'forecasts' => array(
 						$this->make_forecast_data(),
-						$this->make_forecast_data( array( 'id' => 'forecast-def-456', 'daysAhead' => 7 ) ),
+						$this->make_forecast_data( array( 'id' => 'ccdd0000-1111-2222-3333-444455557777', 'daysAhead' => 7 ) ),
 					),
 				),
 			)
@@ -352,8 +352,8 @@ final class RevenueForecastAjaxTest extends TestCase {
 
 		$this->assertTrue( $result->success );
 		$this->assertCount( 2, $result->data['forecasts'] );
-		$this->assertSame( 'forecast-abc-123', $result->data['forecasts'][0]['id'] );
-		$this->assertSame( 'forecast-def-456', $result->data['forecasts'][1]['id'] );
+		$this->assertSame( 'aabb0000-1111-2222-3333-444455556666', $result->data['forecasts'][0]['id'] );
+		$this->assertSame( 'ccdd0000-1111-2222-3333-444455557777', $result->data['forecasts'][1]['id'] );
 	}
 
 	public function test_list_returns_empty_array(): void {
@@ -382,7 +382,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	// ═══════════════════════════════════════════════════════════════════════════
 
 	public function test_get_checks_nonce(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_get'] = fn() => $this->make_json_response(
 			200,
@@ -396,7 +396,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_get_checks_permissions(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 		WP_Stubs::$overrides['current_user_can'] = fn() => false;
 
 		$result = $this->call_handler( 'handle_get_forecast' );
@@ -412,8 +412,17 @@ final class RevenueForecastAjaxTest extends TestCase {
 		$this->assertStringContainsString( 'Forecast ID is required', $result->data['message'] );
 	}
 
+	public function test_get_rejects_invalid_forecast_id_format(): void {
+		$_POST['forecastId'] = 'invalid<script>format';
+
+		$result = $this->call_handler( 'handle_get_forecast' );
+
+		$this->assertFalse( $result->success );
+		$this->assertStringContainsString( 'Invalid forecast ID format', $result->data['message'] );
+	}
+
 	public function test_get_fails_when_not_connected(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 		WP_Stubs::$options['waa_api_url'] = '';
 
 		$result = $this->call_handler( 'handle_get_forecast' );
@@ -423,7 +432,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_get_returns_forecast(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_get'] = fn() => $this->make_json_response(
 			200,
@@ -433,12 +442,12 @@ final class RevenueForecastAjaxTest extends TestCase {
 		$result = $this->call_handler( 'handle_get_forecast' );
 
 		$this->assertTrue( $result->success );
-		$this->assertSame( 'forecast-abc-123', $result->data['id'] );
+		$this->assertSame( 'aabb0000-1111-2222-3333-444455556666', $result->data['id'] );
 		$this->assertSame( 30, $result->data['daysAhead'] );
 	}
 
 	public function test_get_handles_api_error(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_get'] = fn() => new WP_Error( 'http_request_failed', 'Timeout' );
 
@@ -449,7 +458,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_get_handles_404_response(): void {
-		$_POST['forecastId'] = 'nonexistent';
+		$_POST['forecastId'] = '00000000-0000-0000-0000-000000009999';
 
 		WP_Stubs::$overrides['wp_remote_get'] = fn() => $this->make_json_response(
 			404,
@@ -467,7 +476,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	// ═══════════════════════════════════════════════════════════════════════════
 
 	public function test_delete_checks_nonce(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_request'] = fn() => $this->make_json_response(
 			200,
@@ -481,7 +490,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_delete_checks_permissions(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 		WP_Stubs::$overrides['current_user_can'] = fn() => false;
 
 		$result = $this->call_handler( 'handle_delete_forecast' );
@@ -497,8 +506,17 @@ final class RevenueForecastAjaxTest extends TestCase {
 		$this->assertStringContainsString( 'Forecast ID is required', $result->data['message'] );
 	}
 
+	public function test_delete_rejects_invalid_forecast_id_format(): void {
+		$_POST['forecastId'] = 'invalid<script>format';
+
+		$result = $this->call_handler( 'handle_delete_forecast' );
+
+		$this->assertFalse( $result->success );
+		$this->assertStringContainsString( 'Invalid forecast ID format', $result->data['message'] );
+	}
+
 	public function test_delete_fails_when_not_connected(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 		WP_Stubs::$options['waa_api_url'] = '';
 
 		$result = $this->call_handler( 'handle_delete_forecast' );
@@ -508,7 +526,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_delete_returns_success(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_request'] = fn() => $this->make_json_response(
 			200,
@@ -522,7 +540,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_delete_handles_api_error(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		WP_Stubs::$overrides['wp_remote_request'] = fn() => new WP_Error( 'http_request_failed', 'Timeout' );
 
@@ -533,7 +551,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_delete_handles_404_response(): void {
-		$_POST['forecastId'] = 'nonexistent';
+		$_POST['forecastId'] = '00000000-0000-0000-0000-000000009999';
 
 		WP_Stubs::$overrides['wp_remote_request'] = fn() => $this->make_json_response(
 			404,
@@ -547,7 +565,7 @@ final class RevenueForecastAjaxTest extends TestCase {
 	}
 
 	public function test_delete_uses_correct_http_method(): void {
-		$_POST['forecastId'] = 'forecast-abc-123';
+		$_POST['forecastId'] = 'aabb0000-1111-2222-3333-444455556666';
 
 		$captured_args = null;
 		WP_Stubs::$overrides['wp_remote_request'] = function ( $url, $args ) use ( &$captured_args ) {

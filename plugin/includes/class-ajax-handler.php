@@ -1221,31 +1221,16 @@ final class Ajax_Handler {
 	 * Proxies to POST /api/forecasts.
 	 */
 	public function handle_generate_forecast(): void {
-		check_ajax_referer( 'waa_nonce', 'nonce' );
+		$conn = $this->verify_forecast_request();
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
-				403
-			);
-			return;
-		}
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
 
 		$days_ahead = isset( $_POST['daysAhead'] ) ? absint( $_POST['daysAhead'] ) : 0;
 
 		if ( ! in_array( $days_ahead, array( 7, 14, 30 ), true ) ) {
 			wp_send_json_error(
 				array( 'message' => __( 'Days ahead must be 7, 14, or 30.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
-
-		$api_url    = get_option( 'waa_api_url', '' );
-		$auth_token = Settings::get_auth_token();
-
-		if ( empty( $api_url ) || empty( $auth_token ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
 			);
 			return;
 		}
@@ -1294,25 +1279,10 @@ final class Ajax_Handler {
 	 * Proxies to GET /api/forecasts.
 	 */
 	public function handle_list_forecasts(): void {
-		check_ajax_referer( 'waa_nonce', 'nonce' );
+		$conn = $this->verify_forecast_request();
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
-				403
-			);
-			return;
-		}
-
-		$api_url    = get_option( 'waa_api_url', '' );
-		$auth_token = Settings::get_auth_token();
-
-		if ( empty( $api_url ) || empty( $auth_token ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
 
 		$response = wp_remote_get(
 			trailingslashit( $api_url ) . 'api/forecasts',
@@ -1360,36 +1330,11 @@ final class Ajax_Handler {
 	 * Proxies to GET /api/forecasts/:id.
 	 */
 	public function handle_get_forecast(): void {
-		check_ajax_referer( 'waa_nonce', 'nonce' );
+		$conn        = $this->verify_forecast_request();
+		$forecast_id = $this->get_validated_forecast_id();
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
-				403
-			);
-			return;
-		}
-
-		$forecast_id = isset( $_POST['forecastId'] )
-			? sanitize_text_field( wp_unslash( $_POST['forecastId'] ) )
-			: '';
-
-		if ( empty( $forecast_id ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Forecast ID is required.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
-
-		$api_url    = get_option( 'waa_api_url', '' );
-		$auth_token = Settings::get_auth_token();
-
-		if ( empty( $api_url ) || empty( $auth_token ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
 
 		$response = wp_remote_get(
 			trailingslashit( $api_url ) . 'api/forecasts/' . rawurlencode( $forecast_id ),
@@ -1431,36 +1376,11 @@ final class Ajax_Handler {
 	 * Proxies to DELETE /api/forecasts/:id.
 	 */
 	public function handle_delete_forecast(): void {
-		check_ajax_referer( 'waa_nonce', 'nonce' );
+		$conn        = $this->verify_forecast_request();
+		$forecast_id = $this->get_validated_forecast_id();
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
-				403
-			);
-			return;
-		}
-
-		$forecast_id = isset( $_POST['forecastId'] )
-			? sanitize_text_field( wp_unslash( $_POST['forecastId'] ) )
-			: '';
-
-		if ( empty( $forecast_id ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Forecast ID is required.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
-
-		$api_url    = get_option( 'waa_api_url', '' );
-		$auth_token = Settings::get_auth_token();
-
-		if ( empty( $api_url ) || empty( $auth_token ) ) {
-			wp_send_json_error(
-				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
-			);
-			return;
-		}
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
 
 		$response = wp_remote_request(
 			trailingslashit( $api_url ) . 'api/forecasts/' . rawurlencode( $forecast_id ),
@@ -1495,6 +1415,65 @@ final class Ajax_Handler {
 		}
 
 		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Verify nonce, permissions, and store connection for forecast AJAX handlers.
+	 *
+	 * @return array{api_url: string, auth_token: string} Connection details on success.
+	 */
+	private function verify_forecast_request(): array {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		return array(
+			'api_url'    => $api_url,
+			'auth_token' => $auth_token,
+		);
+	}
+
+	/**
+	 * Validate and extract a forecast ID from the request.
+	 *
+	 * @return string The validated forecast ID.
+	 */
+	private function get_validated_forecast_id(): string {
+		$forecast_id = isset( $_POST['forecastId'] )
+			? sanitize_text_field( wp_unslash( $_POST['forecastId'] ) )
+			: '';
+
+		if ( empty( $forecast_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Forecast ID is required.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		if ( ! preg_match( '/^[0-9a-fA-F-]{1,64}$/', $forecast_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid forecast ID format.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		return $forecast_id;
 	}
 
 	/**

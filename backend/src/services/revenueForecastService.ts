@@ -6,6 +6,7 @@ const MAX_FORECASTS_PER_STORE = 10;
 const MIN_HISTORICAL_DAYS = 7;
 const HISTORICAL_LOOKBACK_DAYS = 90;
 const VALID_DAYS_AHEAD = [7, 14, 30] as const;
+const TREND_SLOPE_THRESHOLD = 0.01;
 
 export interface ForecastDataPoint {
   date: string;
@@ -54,7 +55,11 @@ interface DailyRevenueRow {
 
 function parseJson<T>(value: string | T): T {
   if (typeof value === 'string') {
-    return JSON.parse(value) as T;
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      throw new Error(`Invalid JSON in forecast data: ${value.substring(0, 100)}`);
+    }
   }
   return value;
 }
@@ -114,17 +119,6 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
       throw new ValidationError('daysAhead must be 7, 14, or 30');
     }
 
-    // Check max forecasts per store
-    const countResult = await db('revenue_forecasts')
-      .where({ store_id: storeId })
-      .count('* as count')
-      .first<{ count: string }>();
-
-    const total = parseInt(countResult?.count ?? '0', 10);
-    if (total >= MAX_FORECASTS_PER_STORE) {
-      throw new ValidationError(`Maximum of ${MAX_FORECASTS_PER_STORE} forecasts allowed per store`);
-    }
-
     // Query historical daily revenue from orders table using read-only DB
     const startDate = new Date();
     startDate.setUTCDate(startDate.getUTCDate() - HISTORICAL_LOOKBACK_DAYS);
@@ -135,6 +129,7 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
       .whereIn('status', ['completed', 'processing'])
       .groupByRaw("date_trunc('day', date_created)::date")
       .orderBy('day', 'asc')
+      .timeout(5000, { cancel: true })
       .select(
         readonlyDb.raw("date_trunc('day', date_created)::date as day"),
         readonlyDb.raw('SUM(total) as revenue'),
@@ -146,8 +141,11 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
       );
     }
 
-    // Extract revenue values for regression
-    const revenueValues = dailyRevenue.map((row) => parseFloat(row.revenue));
+    // Extract revenue values for regression (guard against NaN)
+    const revenueValues = dailyRevenue.map((row) => {
+      const val = parseFloat(row.revenue);
+      return Number.isNaN(val) ? 0 : val;
+    });
 
     // Compute linear regression
     const { slope, intercept } = linearRegression(revenueValues);
@@ -175,8 +173,10 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
     // Compute summary
     const avgDailyRevenue = revenueValues.reduce((sum, v) => sum + v, 0) / revenueValues.length;
     const projectedTotal = dataPoints.reduce((sum, dp) => sum + dp.predicted, 0);
+    // Normalize slope relative to average daily revenue to determine trend
+    const relativeSlope = avgDailyRevenue > 0 ? slope / avgDailyRevenue : 0;
     const trend: 'up' | 'down' | 'flat' =
-      slope > 0.01 ? 'up' : slope < -0.01 ? 'down' : 'flat';
+      relativeSlope > TREND_SLOPE_THRESHOLD ? 'up' : relativeSlope < -TREND_SLOPE_THRESHOLD ? 'down' : 'flat';
 
     const summary: ForecastSummary = {
       avgDailyRevenue: Math.round(avgDailyRevenue * 100) / 100,
@@ -184,16 +184,30 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
       trend,
     };
 
-    // Insert forecast
-    const [inserted] = await db('revenue_forecasts')
-      .insert({
-        store_id: storeId,
-        days_ahead: input.daysAhead,
-        historical_days: dailyRevenue.length,
-        data_points: JSON.stringify(dataPoints),
-        summary: JSON.stringify(summary),
-      })
-      .returning('*');
+    // Use transaction to prevent race condition on max forecast count
+    const inserted = await db.transaction(async (trx) => {
+      const countResult = await trx('revenue_forecasts')
+        .where({ store_id: storeId })
+        .count('* as count')
+        .first<{ count: string }>();
+
+      const total = parseInt(countResult?.count ?? '0', 10);
+      if (total >= MAX_FORECASTS_PER_STORE) {
+        throw new ValidationError(`Maximum of ${MAX_FORECASTS_PER_STORE} forecasts allowed per store`);
+      }
+
+      const [row] = await trx('revenue_forecasts')
+        .insert({
+          store_id: storeId,
+          days_ahead: input.daysAhead,
+          historical_days: dailyRevenue.length,
+          data_points: JSON.stringify(dataPoints),
+          summary: JSON.stringify(summary),
+        })
+        .returning('*');
+
+      return row;
+    });
 
     logger.info(
       { storeId, forecastId: inserted.id, daysAhead: input.daysAhead, historicalDays: dailyRevenue.length },
@@ -207,6 +221,7 @@ export function createRevenueForecastService(deps: RevenueForecastServiceDeps) {
     const records = await db('revenue_forecasts')
       .where({ store_id: storeId })
       .orderBy('created_at', 'desc')
+      .limit(MAX_FORECASTS_PER_STORE)
       .select<RevenueForecastRecord[]>('*');
 
     return records.map(toResponse);

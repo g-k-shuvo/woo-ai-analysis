@@ -13,6 +13,7 @@ const generateForecastSchema = {
   body: {
     type: 'object' as const,
     required: ['daysAhead'],
+    additionalProperties: false,
     properties: {
       daysAhead: { type: 'integer' as const, enum: [7, 14, 30] },
     },
@@ -23,10 +24,11 @@ const forecastIdParamsSchema = {
   params: {
     type: 'object' as const,
     required: ['id'],
+    additionalProperties: false,
     properties: {
       id: {
         type: 'string' as const,
-        pattern: '^[0-9a-fA-F-]{1,64}$',
+        pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
       },
     },
   },
