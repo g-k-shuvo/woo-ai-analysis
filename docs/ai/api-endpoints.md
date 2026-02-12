@@ -51,11 +51,11 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 ### Dashboards & Charts
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/dashboards/charts` | List saved charts |
-| POST | `/api/dashboards/charts` | Save a chart. Body: `{ title, queryText, chartConfig }` |
-| PUT | `/api/dashboards/charts/:id` | Update saved chart |
-| DELETE | `/api/dashboards/charts/:id` | Delete saved chart |
-| PUT | `/api/dashboards/layout` | Update chart positions. Body: `{ positions: [...] }` |
+| GET | `/api/dashboards/charts` | List saved charts [implemented] |
+| POST | `/api/dashboards/charts` | Save a chart. Body: `{ title, queryText, chartConfig }` [implemented] |
+| PUT | `/api/dashboards/charts/:id` | Update saved chart [implemented] |
+| DELETE | `/api/dashboards/charts/:id` | Delete saved chart [implemented] |
+| PUT | `/api/dashboards/layout` | Update chart positions. Body: `{ positions: [...] }` [implemented] |
 
 ### Reports (Phase 2)
 | Method | Path | Description |
@@ -80,6 +80,9 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_complete_onboarding` | Marks onboarding wizard as completed (nonce required) [implemented] |
 | `waa_dismiss_onboarding` | Marks onboarding wizard as dismissed/skipped (nonce required) [implemented] |
 | `waa_onboarding_status` | Proxies to GET /api/stores/onboarding-status — returns readiness data (nonce required) [implemented] |
+| `waa_save_chart` | Proxies to POST /api/dashboards/charts — saves chart to dashboard (nonce required) [implemented] |
+| `waa_list_charts` | Proxies to GET /api/dashboards/charts — lists saved charts (nonce required) [implemented] |
+| `waa_delete_chart` | Proxies to DELETE /api/dashboards/charts/:id — removes saved chart (nonce required) [implemented] |
 
 ## Response Format (Standard)
 
