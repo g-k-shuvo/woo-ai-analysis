@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import ChartRenderer from './ChartRenderer';
 import TableRenderer from './TableRenderer';
 import ChartTypeSelector from './ChartTypeSelector';
+import SaveChartButton from './SaveChartButton';
 import convertChartType from '../utils/convertChartType';
 
 export default function ChatMessage( { msg, formatTime, onRetry, loading } ) {
@@ -73,6 +74,13 @@ export default function ChatMessage( { msg, formatTime, onRetry, loading } ) {
 				) : (
 					<ChartRenderer config={ activeConfig } />
 				) ) }
+			{ hasChart && activeConfig && (
+				<SaveChartButton
+					chartConfig={ activeConfig }
+					queryText={ msg.data?.sql || msg.content }
+					chartTitle={ msg.data?.chartSpec?.title || msg.content.slice( 0, 100 ) }
+				/>
+			) }
 			{ msg.data?.rowCount !== undefined && msg.role === 'assistant' && (
 				<div className="waa-chat__message-meta">
 					{ msg.data.rowCount }{ ' ' }

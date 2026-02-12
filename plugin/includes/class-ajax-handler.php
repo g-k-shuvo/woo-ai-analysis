@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Handles chat-related AJAX endpoints.
+ * Handles chat and dashboard AJAX endpoints.
  */
 final class Ajax_Handler {
 
@@ -43,6 +43,9 @@ final class Ajax_Handler {
 	private function __construct() {
 		add_action( 'wp_ajax_waa_chat_query', array( $this, 'handle_chat_query' ) );
 		add_action( 'wp_ajax_waa_chat_suggestions', array( $this, 'handle_chat_suggestions' ) );
+		add_action( 'wp_ajax_waa_save_chart', array( $this, 'handle_save_chart' ) );
+		add_action( 'wp_ajax_waa_list_charts', array( $this, 'handle_list_charts' ) );
+		add_action( 'wp_ajax_waa_delete_chart', array( $this, 'handle_delete_chart' ) );
 	}
 
 	/**
@@ -185,6 +188,277 @@ final class Ajax_Handler {
 			}
 		}
 		wp_send_json_success( array( 'suggestions' => $suggestions ) );
+	}
+
+	/**
+	 * Save chart to dashboard AJAX handler.
+	 *
+	 * Proxies to POST /api/dashboards/charts.
+	 */
+	public function handle_save_chart(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$title = isset( $_POST['title'] )
+			? sanitize_text_field( wp_unslash( $_POST['title'] ) )
+			: '';
+
+		if ( empty( $title ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Title is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$query_text  = isset( $_POST['queryText'] )
+			? sanitize_text_field( wp_unslash( $_POST['queryText'] ) )
+			: '';
+
+		$chart_config_raw = isset( $_POST['chartConfig'] )
+			? wp_unslash( $_POST['chartConfig'] )
+			: '';
+
+		if ( empty( $chart_config_raw ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Chart configuration is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$chart_config = json_decode( $chart_config_raw, true );
+		if ( ! is_array( $chart_config ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid chart configuration.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$payload = array(
+			'title'       => $title,
+			'chartConfig' => $chart_config,
+		);
+		if ( ! empty( $query_text ) ) {
+			$payload['queryText'] = $query_text;
+		}
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/dashboards/charts',
+			array(
+				'timeout' => 15,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Save Chart Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ( 200 !== $status_code && 201 !== $status_code ) || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to save chart.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_chart_response( $body['data'] ) );
+	}
+
+	/**
+	 * List saved charts AJAX handler.
+	 *
+	 * Proxies to GET /api/dashboards/charts.
+	 */
+	public function handle_list_charts(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/dashboards/charts',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA List Charts Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load dashboard.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		$charts = array();
+		if ( is_array( $body['data']['charts'] ?? null ) ) {
+			foreach ( $body['data']['charts'] as $chart ) {
+				$charts[] = self::sanitize_chart_response( $chart );
+			}
+		}
+		wp_send_json_success( array( 'charts' => $charts ) );
+	}
+
+	/**
+	 * Delete saved chart AJAX handler.
+	 *
+	 * Proxies to DELETE /api/dashboards/charts/:id.
+	 */
+	public function handle_delete_chart(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$chart_id = isset( $_POST['chartId'] )
+			? sanitize_text_field( wp_unslash( $_POST['chartId'] ) )
+			: '';
+
+		if ( empty( $chart_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Chart ID is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/dashboards/charts/' . rawurlencode( $chart_id ),
+			array(
+				'method'  => 'DELETE',
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Delete Chart Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to delete chart.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Sanitize a single saved chart response from the backend.
+	 *
+	 * @param mixed $data Raw chart data.
+	 * @return array Sanitized chart data.
+	 */
+	private static function sanitize_chart_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		$safe = array(
+			'id'            => isset( $data['id'] ) ? sanitize_text_field( $data['id'] ) : '',
+			'title'         => isset( $data['title'] ) ? sanitize_text_field( $data['title'] ) : '',
+			'queryText'     => isset( $data['queryText'] ) ? sanitize_text_field( $data['queryText'] ) : '',
+			'positionIndex' => isset( $data['positionIndex'] ) ? absint( $data['positionIndex'] ) : 0,
+			'createdAt'     => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
+			'updatedAt'     => isset( $data['updatedAt'] ) ? sanitize_text_field( $data['updatedAt'] ) : '',
+		);
+
+		if ( isset( $data['chartConfig'] ) && is_array( $data['chartConfig'] ) ) {
+			$safe['chartConfig'] = self::sanitize_chart_config( $data['chartConfig'] );
+		} else {
+			$safe['chartConfig'] = null;
+		}
+
+		return $safe;
 	}
 
 	/**
