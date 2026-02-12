@@ -140,3 +140,8 @@
 		opacity: 1;
 	}
 }
+
+/* Widen assistant messages that contain charts or tables */
+.waa-chat__message--has-visual {
+	max-width: 100%;
+}

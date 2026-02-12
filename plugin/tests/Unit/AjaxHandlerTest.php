@@ -322,7 +322,12 @@ final class AjaxHandlerTest extends TestCase {
 		$result = $this->call_handler( 'handle_chat_query' );
 
 		$this->assertTrue( $result->success );
-		$this->assertSame( $backend_data, $result->data );
+		// Response is sanitized: only safe fields are returned.
+		$this->assertSame( 'Your revenue is $10,000', $result->data['answer'] );
+		$this->assertSame( 'SELECT SUM(total) FROM orders WHERE store_id = $1', $result->data['sql'] );
+		$this->assertSame( 1, $result->data['rowCount'] );
+		$this->assertSame( 42, $result->data['durationMs'] );
+		$this->assertNull( $result->data['chartConfig'] );
 	}
 
 	public function test_chat_query_returns_chart_data_when_present(): void {
@@ -345,8 +350,8 @@ final class AjaxHandlerTest extends TestCase {
 		$result = $this->call_handler( 'handle_chat_query' );
 
 		$this->assertTrue( $result->success );
-		$this->assertSame( 'bar', $result->data['chartSpec']['type'] );
-		$this->assertSame( 'Revenue Trend', $result->data['chartSpec']['title'] );
+		$this->assertSame( 'bar', $result->data['chartConfig']['type'] );
+		$this->assertSame( array(), $result->data['chartConfig']['data'] );
 	}
 
 	// ─── handle_chat_query — Error Handling ──────────────────────────────────────
@@ -359,7 +364,7 @@ final class AjaxHandlerTest extends TestCase {
 		$result = $this->call_handler( 'handle_chat_query' );
 
 		$this->assertFalse( $result->success );
-		$this->assertSame( 'Connection timed out', $result->data['message'] );
+		$this->assertSame( 'Unable to connect to analytics service.', $result->data['message'] );
 	}
 
 	public function test_chat_query_handles_non_200_status(): void {
@@ -603,7 +608,7 @@ final class AjaxHandlerTest extends TestCase {
 		$result = $this->call_handler( 'handle_chat_suggestions' );
 
 		$this->assertFalse( $result->success );
-		$this->assertSame( 'DNS resolution failed', $result->data['message'] );
+		$this->assertSame( 'Unable to connect to analytics service.', $result->data['message'] );
 	}
 
 	public function test_suggestions_handles_non_200_status(): void {

@@ -29,7 +29,8 @@ woo-ai-analytics/
 │   │   │   ├── components/
 │   │   │   │   ├── ChatWindow.jsx     # Chat message thread [implemented]
 │   │   │   │   ├── ChatInput.jsx      # Message input + send + suggested questions [implemented]
-│   │   │   │   ├── ChartDisplay.jsx   # Chart.js chart rendering
+│   │   │   │   ├── ChartRenderer.jsx  # Chart.js interactive chart rendering (bar/line/pie/doughnut) [implemented]
+│   │   │   │   ├── TableRenderer.jsx  # Data table rendering from TableResult [implemented]
 │   │   │   │   ├── Dashboard.jsx      # Saved charts grid
 │   │   │   │   ├── Settings.jsx       # Connection settings page
 │   │   │   │   └── OnboardingWizard.jsx
@@ -67,7 +68,7 @@ woo-ai-analytics/
 │   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
 │   │   │   ├── syncService.ts        # Orders/Products/Customers/Categories batch upsert (ON CONFLICT merge, sync logs)
 │   │   │   ├── syncRetryService.ts   # Retry logic, exponential backoff, stale sync detection
-│   │   │   ├── chatService.ts        # Orchestrates AI pipeline (planned)
+│   │   │   ├── chatService.ts        # Orchestrates AI pipeline → executor → chart spec [implemented]
 │   │   │   └── chartService.ts       # Chart rendering (planned)
 │   │   ├── utils/
 │   │   │   ├── errors.ts             # Custom error classes

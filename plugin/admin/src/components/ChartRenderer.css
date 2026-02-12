@@ -1,0 +1,17 @@
+.waa-chart {
+	margin-top: 10px;
+	padding: 12px;
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 6px;
+	max-width: 100%;
+}
+
+.waa-chart canvas {
+	max-width: 100%;
+}
+
+.waa-chart--error {
+	color: #d63638;
+	font-size: 13px;
+}
