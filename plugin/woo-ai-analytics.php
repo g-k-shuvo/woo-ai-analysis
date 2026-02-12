@@ -85,6 +85,20 @@ function waa_deactivate(): void {
 }
 register_deactivation_hook( __FILE__, 'waa_deactivate' );
 
+// Add "Settings" link to the Plugins list page.
+add_filter(
+	'plugin_action_links_' . plugin_basename( __FILE__ ),
+	function ( array $links ): array {
+		$settings_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'admin.php?page=woo-ai-analytics-settings' ) ),
+			esc_html__( 'Settings', 'woo-ai-analytics' )
+		);
+		array_unshift( $links, $settings_link );
+		return $links;
+	}
+);
+
 // Load plugin
 require_once WAA_PLUGIN_DIR . 'includes/class-plugin.php';
 

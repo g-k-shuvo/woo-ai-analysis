@@ -108,6 +108,14 @@ function add_action( string $hook, mixed $callback, int $priority = 10, int $acc
 }
 
 /**
+ * Stub: add_filter. No-op in tests.
+ */
+function add_filter( string $hook, mixed $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	WP_Stubs::record( 'add_filter', array( $hook, $callback, $priority ) );
+	return true;
+}
+
+/**
  * Stub: site_url.
  */
 function site_url( string $path = '' ): string {
