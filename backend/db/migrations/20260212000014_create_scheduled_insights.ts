@@ -15,6 +15,10 @@ export async function up(knex: Knex): Promise<void> {
     table.timestamp('updated_at', { useTz: true }).defaultTo(knex.fn.now());
     table.index(['store_id'], 'idx_scheduled_insights_store');
   });
+
+  await knex.raw(
+    'CREATE INDEX idx_scheduled_insights_next_run ON scheduled_insights(next_run_at) WHERE enabled = true',
+  );
 }
 
 export async function down(knex: Knex): Promise<void> {

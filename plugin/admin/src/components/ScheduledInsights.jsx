@@ -152,6 +152,17 @@ export default function ScheduledInsights() {
 
 	const handleDelete = useCallback(
 		async ( insightId ) => {
+			if (
+				! window.confirm(
+					__(
+						'Are you sure you want to delete this scheduled insight?',
+						'woo-ai-analytics'
+					)
+				)
+			) {
+				return;
+			}
+
 			const formData = new FormData();
 			formData.append( 'action', 'waa_delete_scheduled_insight' );
 			formData.append( 'nonce', nonce );

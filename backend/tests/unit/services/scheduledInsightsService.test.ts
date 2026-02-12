@@ -65,7 +65,13 @@ function createMockDb() {
     returning: jest.fn() as MockQueryBuilder['returning'],
   };
 
-  const db = jest.fn().mockReturnValue(builder);
+  const db = jest.fn().mockReturnValue(builder) as unknown as jest.Mock & {
+    transaction: (cb: (trx: unknown) => Promise<unknown>) => Promise<unknown>;
+  };
+  // transaction() calls the callback with the same db function (trx acts as db inside transaction)
+  (db as unknown as Record<string, unknown>).transaction = async (cb: (trx: unknown) => Promise<unknown>) => {
+    return cb(db);
+  };
   return { db, builder };
 }
 

@@ -911,7 +911,14 @@ final class Ajax_Handler {
 		);
 
 		if ( 'weekly' === $frequency && isset( $_POST['dayOfWeek'] ) ) {
-			$payload['dayOfWeek'] = absint( $_POST['dayOfWeek'] );
+			$day_of_week = absint( $_POST['dayOfWeek'] );
+			if ( $day_of_week > 6 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Day of week must be between 0 and 6.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['dayOfWeek'] = $day_of_week;
 		}
 
 		if ( isset( $_POST['enabled'] ) ) {
@@ -1062,13 +1069,34 @@ final class Ajax_Handler {
 			$payload['name'] = sanitize_text_field( wp_unslash( $_POST['name'] ) );
 		}
 		if ( isset( $_POST['frequency'] ) ) {
-			$payload['frequency'] = sanitize_text_field( wp_unslash( $_POST['frequency'] ) );
+			$frequency = sanitize_text_field( wp_unslash( $_POST['frequency'] ) );
+			if ( ! in_array( $frequency, array( 'daily', 'weekly' ), true ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Frequency must be daily or weekly.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['frequency'] = $frequency;
 		}
 		if ( isset( $_POST['hour'] ) ) {
-			$payload['hour'] = absint( $_POST['hour'] );
+			$hour = absint( $_POST['hour'] );
+			if ( $hour > 23 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Hour must be between 0 and 23.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['hour'] = $hour;
 		}
 		if ( isset( $_POST['dayOfWeek'] ) ) {
-			$payload['dayOfWeek'] = absint( $_POST['dayOfWeek'] );
+			$day_of_week = absint( $_POST['dayOfWeek'] );
+			if ( $day_of_week > 6 ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Day of week must be between 0 and 6.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['dayOfWeek'] = $day_of_week;
 		}
 		if ( isset( $_POST['enabled'] ) ) {
 			$payload['enabled'] = filter_var( $_POST['enabled'], FILTER_VALIDATE_BOOLEAN );

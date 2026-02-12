@@ -163,9 +163,18 @@ function createFakeDb() {
     return builder;
   }
 
-  return function fakeDb(tableName: string) {
+  const fakeDb = function (tableName: string) {
     return createBuilder(tableName);
+  } as unknown as ((tableName: string) => Record<string, unknown>) & {
+    transaction: (cb: (trx: unknown) => Promise<unknown>) => Promise<unknown>;
   };
+
+  // transaction() passes fakeDb as the trx argument
+  fakeDb.transaction = async (cb: (trx: unknown) => Promise<unknown>) => {
+    return cb(fakeDb);
+  };
+
+  return fakeDb;
 }
 
 // ── App builder ──────────────────────────────────────────────────────

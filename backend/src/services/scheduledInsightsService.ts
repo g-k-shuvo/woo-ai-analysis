@@ -68,8 +68,7 @@ function toResponse(record: ScheduledInsightRecord): ScheduledInsightResponse {
   };
 }
 
-function computeNextRunAt(frequency: string, hour: number, dayOfWeek: number | null): string {
-  const now = new Date();
+function computeNextRunAt(frequency: string, hour: number, dayOfWeek: number | null, now: Date = new Date()): string {
   const next = new Date(now);
   next.setUTCMinutes(0, 0, 0);
   next.setUTCHours(hour);
@@ -128,33 +127,37 @@ export function createScheduledInsightsService(deps: ScheduledInsightsServiceDep
   ): Promise<ScheduledInsightResponse> {
     validateInput(input);
 
-    // Enforce max schedules per store
-    const countResult = await db('scheduled_insights')
-      .where({ store_id: storeId })
-      .count('* as count')
-      .first<{ count: string }>();
-
-    const total = parseInt(countResult?.count ?? '0', 10);
-    if (total >= MAX_SCHEDULES_PER_STORE) {
-      throw new ValidationError(`Maximum of ${MAX_SCHEDULES_PER_STORE} scheduled insights allowed per store`);
-    }
-
     const dayOfWeek = input.frequency === 'weekly' ? (input.dayOfWeek ?? null) : null;
     const nextRunAt = input.enabled !== false
       ? computeNextRunAt(input.frequency, input.hour, dayOfWeek)
       : null;
 
-    const [inserted] = await db('scheduled_insights')
-      .insert({
-        store_id: storeId,
-        name: input.name.trim(),
-        frequency: input.frequency,
-        hour: input.hour,
-        day_of_week: dayOfWeek,
-        enabled: input.enabled !== false,
-        next_run_at: nextRunAt,
-      })
-      .returning('*');
+    // Use transaction to prevent TOCTOU race on max schedules check
+    const inserted = await db.transaction(async (trx) => {
+      const countResult = await trx('scheduled_insights')
+        .where({ store_id: storeId })
+        .count('* as count')
+        .first<{ count: string }>();
+
+      const total = parseInt(countResult?.count ?? '0', 10);
+      if (total >= MAX_SCHEDULES_PER_STORE) {
+        throw new ValidationError(`Maximum of ${MAX_SCHEDULES_PER_STORE} scheduled insights allowed per store`);
+      }
+
+      const [row] = await trx('scheduled_insights')
+        .insert({
+          store_id: storeId,
+          name: input.name.trim(),
+          frequency: input.frequency,
+          hour: input.hour,
+          day_of_week: dayOfWeek,
+          enabled: input.enabled !== false,
+          next_run_at: nextRunAt,
+        })
+        .returning('*');
+
+      return row;
+    });
 
     logger.info({ storeId, insightId: inserted.id, frequency: input.frequency }, 'Scheduled insight created');
     return toResponse(inserted as ScheduledInsightRecord);
