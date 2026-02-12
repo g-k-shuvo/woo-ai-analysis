@@ -1,7 +1,7 @@
 # Feature: WordPress.org Compliance
 
 **Slug:** wordpress-org-compliance
-**Status:** In Progress
+**Status:** Complete
 **Owner:** Engineering
 **Created:** 2026-02-12
 **Last updated:** 2026-02-12

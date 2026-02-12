@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Woo AI Analytics 1.0.0\n"
-"Report-Msgid-Bugs-To: https://github.com/user/woo-ai-analytics/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/g-k-shuvo/woo-ai-analysis/issues\n"
 "POT-Creation-Date: 2026-02-12T00:00:00+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
