@@ -308,7 +308,7 @@ describe('PUT /api/dashboards/charts/:id', () => {
     expect(response.statusCode).toBe(200);
   });
 
-  it('accepts update with title exceeding limit via schema validation', async () => {
+  it('rejects update with title exceeding limit via schema validation', async () => {
     const response = await app.inject({
       method: 'PUT',
       url: `/api/dashboards/charts/${CHART_ID}`,

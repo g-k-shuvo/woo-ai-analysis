@@ -5,6 +5,21 @@ export interface DashboardChartsDeps {
   savedChartsService: SavedChartsService;
 }
 
+interface SaveChartBody {
+  title: string;
+  queryText?: string;
+  chartConfig: Record<string, unknown>;
+}
+
+interface UpdateChartBody {
+  title?: string;
+  chartConfig?: Record<string, unknown>;
+}
+
+interface UpdateLayoutBody {
+  positions: Array<{ id: string; positionIndex: number }>;
+}
+
 const saveChartSchema = {
   body: {
     type: 'object' as const,
@@ -55,13 +70,12 @@ export async function dashboardChartsRoutes(
   const { savedChartsService } = deps;
 
   // POST /api/dashboards/charts — save a new chart
-  fastify.post('/api/dashboards/charts', { schema: saveChartSchema }, async (request, reply) => {
+  fastify.post<{ Body: SaveChartBody }>(
+    '/api/dashboards/charts',
+    { schema: saveChartSchema },
+    async (request, reply) => {
     const store = request.store!;
-    const { title, queryText, chartConfig } = request.body as {
-      title: string;
-      queryText?: string;
-      chartConfig: Record<string, unknown>;
-    };
+    const { title, queryText, chartConfig } = request.body;
 
     const chart = await savedChartsService.saveChart(store.id, {
       title,
@@ -73,7 +87,8 @@ export async function dashboardChartsRoutes(
       success: true,
       data: chart,
     });
-  });
+  },
+  );
 
   // GET /api/dashboards/charts — list all saved charts
   fastify.get('/api/dashboards/charts', async (request, reply) => {
@@ -87,16 +102,13 @@ export async function dashboardChartsRoutes(
   });
 
   // PUT /api/dashboards/charts/:id — update a saved chart
-  fastify.put<{ Params: { id: string } }>(
+  fastify.put<{ Params: { id: string }; Body: UpdateChartBody }>(
     '/api/dashboards/charts/:id',
     { schema: updateChartSchema },
     async (request, reply) => {
       const store = request.store!;
       const { id } = request.params;
-      const { title, chartConfig } = request.body as {
-        title?: string;
-        chartConfig?: Record<string, unknown>;
-      };
+      const { title, chartConfig } = request.body;
 
       const chart = await savedChartsService.updateChart(store.id, id, {
         title,
@@ -127,11 +139,12 @@ export async function dashboardChartsRoutes(
   );
 
   // PUT /api/dashboards/layout — reorder charts
-  fastify.put('/api/dashboards/layout', { schema: updateLayoutSchema }, async (request, reply) => {
+  fastify.put<{ Body: UpdateLayoutBody }>(
+    '/api/dashboards/layout',
+    { schema: updateLayoutSchema },
+    async (request, reply) => {
     const store = request.store!;
-    const { positions } = request.body as {
-      positions: Array<{ id: string; positionIndex: number }>;
-    };
+    const { positions } = request.body;
 
     await savedChartsService.updateLayout(store.id, positions);
 
@@ -139,5 +152,6 @@ export async function dashboardChartsRoutes(
       success: true,
       data: { updated: true },
     });
-  });
+  },
+  );
 }

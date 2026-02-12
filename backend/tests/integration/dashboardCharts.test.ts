@@ -14,6 +14,7 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
 
 const { createSavedChartsService } = await import('../../src/services/savedChartsService.js');
 const { dashboardChartsRoutes } = await import('../../src/routes/dashboards/charts.js');
+const { registerErrorHandler } = await import('../../src/middleware/errorHandler.js');
 
 // ── In-memory "database" ───────────────────────────────────────────
 
@@ -205,6 +206,7 @@ async function buildApp(
   });
 
   const app = Fastify({ logger: false });
+  registerErrorHandler(app);
   app.decorateRequest('store', undefined);
   app.addHook('onRequest', async (request) => {
     request.store = {
@@ -457,8 +459,8 @@ describe('Dashboard Charts Integration', () => {
         url: `/api/dashboards/charts/${chartId}`,
       });
 
-      // Should fail (NotFoundError → 404 or 500 depending on error handler)
-      expect(deleteRes.statusCode).toBeGreaterThanOrEqual(400);
+      // NotFoundError → 404
+      expect(deleteRes.statusCode).toBe(404);
 
       // Verify chart still exists for store B
       const listB = await appB.inject({
@@ -491,8 +493,8 @@ describe('Dashboard Charts Integration', () => {
         payload: { title: 'Chart 21', chartConfig: { type: 'bar' } },
       });
 
-      // ValidationError → 400 (or 500 if no error handler)
-      expect(res.statusCode).toBeGreaterThanOrEqual(400);
+      // ValidationError → 400
+      expect(res.statusCode).toBe(400);
       const body = JSON.parse(res.body);
       expect(body.message || body.error?.message || '').toContain('Maximum');
     });

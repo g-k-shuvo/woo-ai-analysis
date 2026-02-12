@@ -47,6 +47,10 @@ export interface SavedChartsServiceDeps {
   db: Knex;
 }
 
+function parseChartConfig(raw: unknown): Record<string, unknown> {
+  return typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>);
+}
+
 function toResponse(record: SavedChartRecord): SavedChartResponse {
   return {
     id: record.id,
@@ -110,13 +114,9 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
       })
       .returning('*');
 
-    // Parse chart_config back from string if needed
     const record = {
       ...inserted,
-      chart_config:
-        typeof inserted.chart_config === 'string'
-          ? JSON.parse(inserted.chart_config)
-          : inserted.chart_config,
+      chart_config: parseChartConfig(inserted.chart_config),
     } as SavedChartRecord;
 
     logger.info({ storeId, chartId: record.id }, 'Chart saved to dashboard');
@@ -129,11 +129,9 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
       .orderBy('position_index', 'asc')
       .select<SavedChartRecord[]>('*');
 
-    return records.map((r) => {
-      const config =
-        typeof r.chart_config === 'string' ? JSON.parse(r.chart_config) : r.chart_config;
-      return toResponse({ ...r, chart_config: config });
-    });
+    return records.map((r) =>
+      toResponse({ ...r, chart_config: parseChartConfig(r.chart_config) }),
+    );
   }
 
   async function getChart(storeId: string, chartId: string): Promise<SavedChartResponse> {
@@ -145,12 +143,7 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
       throw new NotFoundError('Saved chart not found');
     }
 
-    const config =
-      typeof record.chart_config === 'string'
-        ? JSON.parse(record.chart_config)
-        : record.chart_config;
-
-    return toResponse({ ...record, chart_config: config });
+    return toResponse({ ...record, chart_config: parseChartConfig(record.chart_config) });
   }
 
   async function updateChart(
@@ -193,13 +186,11 @@ export function createSavedChartsService(deps: SavedChartsServiceDeps) {
       .update(updates)
       .returning('*');
 
-    const config =
-      typeof updated.chart_config === 'string'
-        ? JSON.parse(updated.chart_config)
-        : updated.chart_config;
-
     logger.info({ storeId, chartId }, 'Saved chart updated');
-    return toResponse({ ...updated, chart_config: config } as SavedChartRecord);
+    return toResponse({
+      ...updated,
+      chart_config: parseChartConfig(updated.chart_config),
+    } as SavedChartRecord);
   }
 
   async function deleteChart(storeId: string, chartId: string): Promise<void> {
