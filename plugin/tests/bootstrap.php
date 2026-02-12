@@ -353,6 +353,54 @@ function wp_remote_retrieve_body( array|WP_Error $response ): string {
 	return $response['body'] ?? '';
 }
 
+/**
+ * Stub: WP_Http_Headers_Stub — simulates WP HTTP response headers.
+ */
+class WP_Http_Headers_Stub implements \ArrayAccess {
+	private array $headers;
+
+	public function __construct( array $headers = array() ) {
+		$this->headers = array_change_key_case( $headers, CASE_LOWER );
+	}
+
+	public function offsetExists( mixed $offset ): bool {
+		return isset( $this->headers[ strtolower( $offset ) ] );
+	}
+
+	public function offsetGet( mixed $offset ): mixed {
+		return $this->headers[ strtolower( $offset ) ] ?? '';
+	}
+
+	public function offsetSet( mixed $offset, mixed $value ): void {
+		$this->headers[ strtolower( $offset ) ] = $value;
+	}
+
+	public function offsetUnset( mixed $offset ): void {
+		unset( $this->headers[ strtolower( $offset ) ] );
+	}
+
+	public function getAll(): array {
+		return $this->headers;
+	}
+}
+
+/**
+ * Stub: wp_remote_retrieve_header.
+ */
+function wp_remote_retrieve_header( array|WP_Error $response, string $header ): string {
+	if ( is_wp_error( $response ) ) {
+		return '';
+	}
+	$headers = $response['headers'] ?? array();
+	if ( $headers instanceof WP_Http_Headers_Stub ) {
+		return (string) $headers[ $header ];
+	}
+	if ( is_array( $headers ) ) {
+		return (string) ( $headers[ strtolower( $header ) ] ?? '' );
+	}
+	return '';
+}
+
 // wp_send_json_success / wp_send_json_error — capture output and throw to stop execution.
 
 /**

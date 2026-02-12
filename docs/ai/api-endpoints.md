@@ -65,6 +65,11 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 | GET | `/api/reports/:id/download` | Download PDF report file (application/pdf) [implemented] |
 | DELETE | `/api/reports/:id` | Delete a generated report [implemented] |
 
+### Exports
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/exports/csv` | Export saved charts as CSV. Body: `{ chartId? }`. Returns text/csv with BOM [implemented] |
+
 ## Plugin-Side Endpoints (WordPress AJAX)
 
 These run inside WordPress via `admin-ajax.php`:
@@ -88,6 +93,7 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_generate_report` | Proxies to POST /api/reports/generate — generates PDF report (nonce required) [implemented] |
 | `waa_list_reports` | Proxies to GET /api/reports — lists generated reports (nonce required) [implemented] |
 | `waa_download_report` | Proxies to GET /api/reports/:id/download — downloads PDF (nonce required) [implemented] |
+| `waa_export_csv` | Proxies to POST /api/exports/csv — exports chart data as CSV (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

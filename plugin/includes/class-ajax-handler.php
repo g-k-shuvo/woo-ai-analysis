@@ -50,6 +50,7 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_generate_report', array( $this, 'handle_generate_report' ) );
 		add_action( 'wp_ajax_waa_list_reports', array( $this, 'handle_list_reports' ) );
 		add_action( 'wp_ajax_waa_download_report', array( $this, 'handle_download_report' ) );
+		add_action( 'wp_ajax_waa_export_csv', array( $this, 'handle_export_csv' ) );
 	}
 
 	/**
@@ -751,6 +752,94 @@ final class Ajax_Handler {
 			array(
 				'pdfData'  => $pdf_base64,
 				'filename' => 'report-' . sanitize_file_name( $report_id ) . '.pdf',
+			)
+		);
+	}
+
+	/**
+	 * Export CSV AJAX handler.
+	 *
+	 * Proxies to POST /api/exports/csv.
+	 */
+	public function handle_export_csv(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$chart_id = isset( $_POST['chartId'] )
+			? sanitize_text_field( wp_unslash( $_POST['chartId'] ) )
+			: '';
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$payload = array();
+		if ( ! empty( $chart_id ) ) {
+			$payload['chartId'] = $chart_id;
+		}
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/exports/csv',
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Export CSV Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code  = wp_remote_retrieve_response_code( $response );
+		$content_type = wp_remote_retrieve_header( $response, 'content-type' );
+
+		if ( 200 !== $status_code || false === strpos( $content_type, 'text/csv' ) ) {
+			$body      = json_decode( wp_remote_retrieve_body( $response ), true );
+			$error_msg = __( 'Failed to export CSV.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		// Return CSV content as base64 for the client to download.
+		$csv_body = wp_remote_retrieve_body( $response );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$csv_base64 = base64_encode( $csv_body );
+
+		$disposition = wp_remote_retrieve_header( $response, 'content-disposition' );
+		$filename    = 'dashboard-export.csv';
+		if ( preg_match( '/filename="?([^";\s]+)"?/', $disposition, $matches ) ) {
+			$filename = sanitize_file_name( $matches[1] );
+		}
+
+		wp_send_json_success(
+			array(
+				'csvData'  => $csv_base64,
+				'filename' => $filename,
 			)
 		);
 	}
