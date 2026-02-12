@@ -34,6 +34,8 @@ import { reportRoutes } from './routes/reports/index.js';
 import { createChartRenderer } from './services/chartRenderer.js';
 import { createCsvExportService } from './services/csvExportService.js';
 import { csvExportRoutes } from './routes/exports/csv.js';
+import { createScheduledInsightsService } from './services/scheduledInsightsService.js';
+import { scheduledInsightsRoutes } from './routes/scheduledInsights/index.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -104,6 +106,9 @@ const pdfReportService = createPdfReportService({ db, chartRenderer: chartRender
 // Export services
 const csvExportService = createCsvExportService({ db });
 
+// Scheduled insights service
+const scheduledInsightsService = createScheduledInsightsService({ db });
+
 // Rate limiter
 const rateLimiter = createRateLimiter({
   redis,
@@ -172,6 +177,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => csvExportRoutes(instance, { csvExportService }),
+);
+
+await fastify.register(
+  async (instance) => scheduledInsightsRoutes(instance, { scheduledInsightsService }),
 );
 
 // Graceful shutdown

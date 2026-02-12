@@ -37,6 +37,7 @@ woo-ai-analytics/
 │   │   │   │   ├── Dashboard.jsx      # Saved charts grid + PDF/CSV export buttons [implemented]
 │   │   │   │   ├── ExportPdfButton.jsx # PDF report export button [implemented]
 │   │   │   │   ├── ExportCsvButton.jsx # CSV export button [implemented]
+│   │   │   │   ├── ScheduledInsights.jsx # Scheduled insights CRUD management [implemented]
 │   │   │   │   ├── Settings.jsx       # Connection settings page
 │   │   │   │   └── OnboardingWizard.jsx  # 4-step onboarding wizard [implemented]
 │   │   │   ├── utils/
@@ -58,7 +59,8 @@ woo-ai-analytics/
 │   │       ├── AdminUITest.php         # Menu registration + asset enqueue tests [implemented]
 │   │       ├── WebhooksTest.php        # Incremental sync + PII protection tests [implemented]
 │   │       ├── ReportAjaxTest.php     # PDF report AJAX handler tests [implemented]
-│   │       └── CsvExportAjaxTest.php # CSV export AJAX handler tests [implemented]
+│   │       ├── CsvExportAjaxTest.php # CSV export AJAX handler tests [implemented]
+│   │       └── ScheduledInsightsAjaxTest.php # Scheduled insights AJAX handler tests [implemented]
 │   └── composer.json
 ├── backend/                     # SaaS API server
 │   ├── src/
@@ -82,8 +84,10 @@ woo-ai-analytics/
 │   │   │   │   └── layout.ts         # Grid layout update [implemented]
 │   │   │   ├── reports/
 │   │   │   │   └── index.ts          # PDF report generate, list, download, delete [implemented]
-│   │   │   └── exports/
-│   │   │       └── csv.ts            # CSV export endpoint [implemented]
+│   │   │   ├── exports/
+│   │   │   │   └── csv.ts            # CSV export endpoint [implemented]
+│   │   │   └── scheduledInsights/
+│   │   │       └── index.ts          # Scheduled insights CRUD routes [implemented]
 │   │   ├── middleware/
 │   │   │   ├── auth.ts               # API key validation (Bearer token, bcrypt compare)
 │   │   │   ├── errorHandler.ts       # Global error handler + 404
@@ -97,7 +101,8 @@ woo-ai-analytics/
 │   │   │   ├── savedChartsService.ts # Dashboard saved charts CRUD [implemented]
 │   │   │   ├── dashboardLayoutService.ts # Grid layout update [implemented]
 │   │   │   ├── pdfReportService.ts   # PDF report generation via PDFKit + chartRenderer [implemented]
-│   │   │   └── csvExportService.ts  # CSV export from saved chart data [implemented]
+│   │   │   ├── csvExportService.ts  # CSV export from saved chart data [implemented]
+│   │   │   └── scheduledInsightsService.ts # Scheduled insights CRUD + next_run_at computation [implemented]
 │   │   ├── utils/
 │   │   │   ├── errors.ts             # Custom error classes
 │   │   │   └── logger.ts             # Structured logging
@@ -154,11 +159,13 @@ woo-ai-analytics/
 │   │   │   │   ├── syncWebhook.test.ts     # Sync webhook route unit tests [implemented]
 │   │   │   │   ├── syncStatus.test.ts      # Sync status route unit tests [implemented]
 │   │   │   │   ├── syncErrors.test.ts      # Sync errors + retry route unit tests [implemented]
-│   │   │   │   └── csvExport.test.ts      # CSV export route unit tests [implemented]
+│   │   │   │   ├── csvExport.test.ts      # CSV export route unit tests [implemented]
+│   │   │   │   └── scheduledInsights.test.ts # Scheduled insights route unit tests [implemented]
 │   │   │   ├── services/
 │   │   │   │   ├── chatService.test.ts   # Chat service unit tests (incl. chartImage) [implemented]
 │   │   │   │   ├── chartRenderer.test.ts # Chart renderer unit tests [implemented]
-│   │   │   │   └── csvExportService.test.ts # CSV export service unit tests [implemented]
+│   │   │   │   ├── csvExportService.test.ts # CSV export service unit tests [implemented]
+│   │   │   │   └── scheduledInsightsService.test.ts # Scheduled insights service unit tests [implemented]
 │   │   │   ├── utils/
 │   │   │   │   └── logger.test.ts         # Logger utility unit tests [implemented]
 │   │   │   ├── server/
@@ -177,6 +184,7 @@ woo-ai-analytics/
 │   │   │   ├── chartRenderer.test.ts  # Server-side chart renderer integration tests [implemented]
 │   │   │   ├── chartTypeConverter.test.ts # Chart type converter integration tests [implemented]
 │   │   │   ├── csvExport.test.ts        # CSV export integration tests [implemented]
+│   │   │   ├── scheduledInsights.test.ts # Scheduled insights integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev

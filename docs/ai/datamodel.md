@@ -176,6 +176,25 @@ CREATE TABLE reports (
 CREATE INDEX idx_reports_store ON reports(store_id);
 ```
 
+### scheduled_insights
+Scheduled insight delivery rules (daily/weekly). Max 5 per store.
+```sql
+CREATE TABLE scheduled_insights (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id     UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name         VARCHAR(255) NOT NULL,
+  frequency    VARCHAR(20) NOT NULL DEFAULT 'daily',  -- daily|weekly
+  hour         INTEGER NOT NULL DEFAULT 8,             -- 0-23 UTC
+  day_of_week  INTEGER,                                -- 0-6 (Sun-Sat), only for weekly
+  enabled      BOOLEAN NOT NULL DEFAULT true,
+  last_run_at  TIMESTAMPTZ,
+  next_run_at  TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_scheduled_insights_store ON scheduled_insights(store_id);
+```
+
 ### sync_logs
 Track sync health and history.
 ```sql
