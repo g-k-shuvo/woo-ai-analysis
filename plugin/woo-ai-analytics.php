@@ -48,11 +48,23 @@ add_action(
  * Check if WooCommerce is active.
  */
 function waa_is_woocommerce_active(): bool {
-	return in_array(
+	if ( in_array(
 		'woocommerce/woocommerce.php',
 		apply_filters( 'active_plugins', get_option( 'active_plugins', array() ) ),
 		true
-	);
+	) ) {
+		return true;
+	}
+
+	// Check network-activated plugins on multisite.
+	if ( is_multisite() ) {
+		$network_plugins = get_site_option( 'active_sitewide_plugins', array() );
+		if ( isset( $network_plugins['woocommerce/woocommerce.php'] ) ) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -80,12 +92,26 @@ register_activation_hook( __FILE__, 'waa_activate' );
  * Plugin deactivation hook.
  */
 function waa_deactivate(): void {
-	// Clean up transients
+	// Clean up transients.
 	delete_transient( 'waa_sync_status' );
 }
 register_deactivation_hook( __FILE__, 'waa_deactivate' );
 
-// Load plugin
+// Add "Settings" link to the Plugins list page.
+add_filter(
+	'plugin_action_links_' . plugin_basename( __FILE__ ),
+	function ( array $links ): array {
+		$settings_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'admin.php?page=woo-ai-analytics-settings' ) ),
+			esc_html__( 'Settings', 'woo-ai-analytics' )
+		);
+		array_unshift( $links, $settings_link );
+		return $links;
+	}
+);
+
+// Load plugin.
 require_once WAA_PLUGIN_DIR . 'includes/class-plugin.php';
 
 add_action(

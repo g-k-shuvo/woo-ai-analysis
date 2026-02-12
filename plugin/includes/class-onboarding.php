@@ -171,4 +171,11 @@ final class Onboarding {
 	 * Prevent cloning.
 	 */
 	private function __clone() {}
+
+	/**
+	 * Prevent unserialization.
+	 */
+	public function __wakeup(): void {
+		throw new \RuntimeException( 'Cannot unserialize singleton.' );
+	}
 }

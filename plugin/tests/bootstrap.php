@@ -108,6 +108,14 @@ function add_action( string $hook, mixed $callback, int $priority = 10, int $acc
 }
 
 /**
+ * Stub: add_filter. No-op in tests.
+ */
+function add_filter( string $hook, mixed $callback, int $priority = 10, int $accepted_args = 1 ): bool {
+	WP_Stubs::record( 'add_filter', array( $hook, $callback, $priority ) );
+	return true;
+}
+
+/**
  * Stub: site_url.
  */
 function site_url( string $path = '' ): string {
@@ -452,6 +460,24 @@ function load_plugin_textdomain( string $domain, string|false $deprecated = fals
  */
 function is_admin(): bool {
 	return true;
+}
+
+/**
+ * Stub: is_multisite.
+ */
+function is_multisite(): bool {
+	return WP_Stubs::$overrides['is_multisite'] ?? false;
+}
+
+/**
+ * Stub: get_site_option.
+ */
+function get_site_option( string $key, mixed $default = false ): mixed {
+	WP_Stubs::record( 'get_site_option', array( $key, $default ) );
+	if ( array_key_exists( $key, WP_Stubs::$overrides['site_options'] ?? array() ) ) {
+		return WP_Stubs::$overrides['site_options'][ $key ];
+	}
+	return $default;
 }
 
 // ─── WordPress Admin UI Function Stubs ──────────────────────────────────────────

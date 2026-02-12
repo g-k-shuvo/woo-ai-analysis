@@ -46,7 +46,7 @@
 - [x] **5.3** AI test suite — 50+ question→answer test cases
 - [x] **5.4** Backend tests — Jest unit + integration tests
 - [x] **5.5** Plugin tests — PHPUnit tests
-- [ ] **5.6** WordPress.org compliance — readme.txt, screenshots, i18n
+- [x] **5.6** WordPress.org compliance — readme.txt, screenshots, i18n
 - [ ] **5.7** Landing page
 - [ ] **5.8** Submit to WordPress.org
 
