@@ -16,6 +16,7 @@ All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
 |--------|------|-------------|
 | POST | `/api/stores/connect` | Register a new store. Body: `{ storeUrl, apiKey, wcVersion }` |
 | GET | `/api/stores/status` | Check connection status and sync health |
+| GET | `/api/stores/onboarding-status` | Check onboarding readiness: connected, hasSyncedData, recordCounts |
 | DELETE | `/api/stores/disconnect` | Disconnect store, delete all synced data |
 
 ### Data Sync
@@ -70,6 +71,9 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_disconnect` | Disconnects store (nonce required) |
 | `waa_save_settings` | Saves API URL setting (nonce required) |
 | `waa_test_connection` | Tests connection to backend health endpoint (nonce required) |
+| `waa_complete_onboarding` | Marks onboarding wizard as completed (nonce required) [implemented] |
+| `waa_dismiss_onboarding` | Marks onboarding wizard as dismissed/skipped (nonce required) [implemented] |
+| `waa_onboarding_status` | Proxies to GET /api/stores/onboarding-status — returns readiness data (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

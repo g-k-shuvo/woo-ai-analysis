@@ -88,7 +88,7 @@ await fastify.register(
 );
 
 await fastify.register(
-  async (instance) => storeRoutes(instance, { storeService }),
+  async (instance) => storeRoutes(instance, { storeService, db }),
 );
 
 await fastify.register(

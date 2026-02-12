@@ -21,6 +21,7 @@ woo-ai-analytics/
 │   │   ├── class-settings.php         # Settings page & API key management
 │   │   ├── class-sync-manager.php     # Data sync engine (full + incremental)
 │   │   ├── class-ajax-handler.php     # AJAX endpoints (chat, sync status)
+│   │   ├── class-onboarding.php       # Onboarding wizard AJAX handlers [implemented]
 │   │   ├── class-webhooks.php          # WooCommerce incremental sync hooks (implemented)
 │   │   └── class-admin-ui.php         # Admin page rendering & script enqueue
 │   ├── admin/                   # React admin UI source
@@ -35,11 +36,12 @@ woo-ai-analytics/
 │   │   │   │   ├── ChartTypeSelector.jsx # Chart type toolbar (bar/line/pie/doughnut/table) [implemented]
 │   │   │   │   ├── Dashboard.jsx      # Saved charts grid
 │   │   │   │   ├── Settings.jsx       # Connection settings page
-│   │   │   │   └── OnboardingWizard.jsx
+│   │   │   │   └── OnboardingWizard.jsx  # 4-step onboarding wizard [implemented]
 │   │   │   ├── utils/
 │   │   │   │   └── convertChartType.js # Client-side chart type converter [implemented]
 │   │   │   └── hooks/
 │   │   │       ├── useChat.js         # Chat state management
+│   │   │       ├── useOnboarding.js   # Onboarding wizard state management [implemented]
 │   │   │       └── useSyncStatus.js   # Sync progress polling
 │   │   ├── package.json
 │   │   └── webpack.config.js          # @wordpress/scripts config

@@ -458,3 +458,4 @@ function is_admin(): bool {
 
 require_once WAA_PLUGIN_DIR . 'includes/class-settings.php';
 require_once WAA_PLUGIN_DIR . 'includes/class-ajax-handler.php';
+require_once WAA_PLUGIN_DIR . 'includes/class-onboarding.php';
