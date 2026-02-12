@@ -55,6 +55,10 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_list_scheduled_insights', array( $this, 'handle_list_scheduled_insights' ) );
 		add_action( 'wp_ajax_waa_update_scheduled_insight', array( $this, 'handle_update_scheduled_insight' ) );
 		add_action( 'wp_ajax_waa_delete_scheduled_insight', array( $this, 'handle_delete_scheduled_insight' ) );
+		add_action( 'wp_ajax_waa_generate_forecast', array( $this, 'handle_generate_forecast' ) );
+		add_action( 'wp_ajax_waa_list_forecasts', array( $this, 'handle_list_forecasts' ) );
+		add_action( 'wp_ajax_waa_get_forecast', array( $this, 'handle_get_forecast' ) );
+		add_action( 'wp_ajax_waa_delete_forecast', array( $this, 'handle_delete_forecast' ) );
 	}
 
 	/**
@@ -1209,6 +1213,324 @@ final class Ajax_Handler {
 		}
 
 		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Generate forecast AJAX handler.
+	 *
+	 * Proxies to POST /api/forecasts.
+	 */
+	public function handle_generate_forecast(): void {
+		$conn = $this->verify_forecast_request();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$days_ahead = isset( $_POST['daysAhead'] ) ? absint( $_POST['daysAhead'] ) : 0;
+
+		if ( ! in_array( $days_ahead, array( 7, 14, 30 ), true ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Days ahead must be 7, 14, or 30.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$payload = array( 'daysAhead' => $days_ahead );
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/forecasts',
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Generate Forecast Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ( 200 !== $status_code && 201 !== $status_code ) || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to generate forecast.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_forecast_response( $body['data'] ) );
+	}
+
+	/**
+	 * List forecasts AJAX handler.
+	 *
+	 * Proxies to GET /api/forecasts.
+	 */
+	public function handle_list_forecasts(): void {
+		$conn = $this->verify_forecast_request();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/forecasts',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA List Forecasts Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load forecasts.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		$forecasts = array();
+		if ( is_array( $body['data']['forecasts'] ?? null ) ) {
+			foreach ( $body['data']['forecasts'] as $forecast ) {
+				$forecasts[] = self::sanitize_forecast_response( $forecast );
+			}
+		}
+		wp_send_json_success( array( 'forecasts' => $forecasts ) );
+	}
+
+	/**
+	 * Get forecast AJAX handler.
+	 *
+	 * Proxies to GET /api/forecasts/:id.
+	 */
+	public function handle_get_forecast(): void {
+		$conn        = $this->verify_forecast_request();
+		$forecast_id = $this->get_validated_forecast_id();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/forecasts/' . rawurlencode( $forecast_id ),
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Get Forecast Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load forecast.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_forecast_response( $body['data'] ) );
+	}
+
+	/**
+	 * Delete forecast AJAX handler.
+	 *
+	 * Proxies to DELETE /api/forecasts/:id.
+	 */
+	public function handle_delete_forecast(): void {
+		$conn        = $this->verify_forecast_request();
+		$forecast_id = $this->get_validated_forecast_id();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/forecasts/' . rawurlencode( $forecast_id ),
+			array(
+				'method'  => 'DELETE',
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Delete Forecast Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to delete forecast.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Verify nonce, permissions, and store connection for forecast AJAX handlers.
+	 *
+	 * @return array{api_url: string, auth_token: string} Connection details on success.
+	 */
+	private function verify_forecast_request(): array {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		return array(
+			'api_url'    => $api_url,
+			'auth_token' => $auth_token,
+		);
+	}
+
+	/**
+	 * Validate and extract a forecast ID from the request.
+	 *
+	 * @return string The validated forecast ID.
+	 */
+	private function get_validated_forecast_id(): string {
+		$forecast_id = isset( $_POST['forecastId'] )
+			? sanitize_text_field( wp_unslash( $_POST['forecastId'] ) )
+			: '';
+
+		if ( empty( $forecast_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Forecast ID is required.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		if ( ! preg_match( '/^[0-9a-fA-F-]{1,64}$/', $forecast_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid forecast ID format.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		return $forecast_id;
+	}
+
+	/**
+	 * Sanitize a revenue forecast response from the backend.
+	 *
+	 * @param mixed $data Raw forecast data.
+	 * @return array Sanitized forecast data.
+	 */
+	private static function sanitize_forecast_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		$safe = array(
+			'id'             => isset( $data['id'] ) ? sanitize_text_field( $data['id'] ) : '',
+			'daysAhead'      => isset( $data['daysAhead'] ) ? absint( $data['daysAhead'] ) : 0,
+			'historicalDays' => isset( $data['historicalDays'] ) ? absint( $data['historicalDays'] ) : 0,
+			'createdAt'      => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
+		);
+
+		// Sanitize data points array.
+		$safe['dataPoints'] = array();
+		if ( isset( $data['dataPoints'] ) && is_array( $data['dataPoints'] ) ) {
+			foreach ( $data['dataPoints'] as $point ) {
+				if ( ! is_array( $point ) ) {
+					continue;
+				}
+				$safe['dataPoints'][] = array(
+					'date'      => isset( $point['date'] ) ? sanitize_text_field( $point['date'] ) : '',
+					'predicted' => isset( $point['predicted'] ) ? (float) $point['predicted'] : 0.0,
+					'type'      => isset( $point['type'] ) ? sanitize_text_field( $point['type'] ) : 'forecast',
+				);
+			}
+		}
+
+		// Sanitize summary.
+		$safe['summary'] = array(
+			'avgDailyRevenue' => 0.0,
+			'projectedTotal'  => 0.0,
+			'trend'           => 'flat',
+		);
+		if ( isset( $data['summary'] ) && is_array( $data['summary'] ) ) {
+			$safe['summary']['avgDailyRevenue'] = isset( $data['summary']['avgDailyRevenue'] )
+				? (float) $data['summary']['avgDailyRevenue']
+				: 0.0;
+			$safe['summary']['projectedTotal'] = isset( $data['summary']['projectedTotal'] )
+				? (float) $data['summary']['projectedTotal']
+				: 0.0;
+			$trend = isset( $data['summary']['trend'] )
+				? sanitize_text_field( $data['summary']['trend'] )
+				: 'flat';
+			$safe['summary']['trend'] = in_array( $trend, array( 'up', 'down', 'flat' ), true )
+				? $trend
+				: 'flat';
+		}
+
+		return $safe;
 	}
 
 	/**

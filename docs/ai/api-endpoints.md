@@ -78,6 +78,14 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 | PUT | `/api/scheduled-insights/:id` | Update a scheduled insight. Body: `{ name?, frequency?, hour?, dayOfWeek?, enabled? }` [implemented] |
 | DELETE | `/api/scheduled-insights/:id` | Delete a scheduled insight [implemented] |
 
+### Revenue Forecasts
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/forecasts` | Generate a revenue forecast. Body: `{ daysAhead: 7|14|30 }` [implemented] |
+| GET | `/api/forecasts` | List all forecasts for the store [implemented] |
+| GET | `/api/forecasts/:id` | Get a specific forecast with data points [implemented] |
+| DELETE | `/api/forecasts/:id` | Delete a forecast [implemented] |
+
 ## Plugin-Side Endpoints (WordPress AJAX)
 
 These run inside WordPress via `admin-ajax.php`:
@@ -106,6 +114,10 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_list_scheduled_insights` | Proxies to GET /api/scheduled-insights — lists scheduled insights (nonce required) [implemented] |
 | `waa_update_scheduled_insight` | Proxies to PUT /api/scheduled-insights/:id — updates scheduled insight (nonce required) [implemented] |
 | `waa_delete_scheduled_insight` | Proxies to DELETE /api/scheduled-insights/:id — deletes scheduled insight (nonce required) [implemented] |
+| `waa_generate_forecast` | Proxies to POST /api/forecasts — generates revenue forecast (nonce required) [implemented] |
+| `waa_list_forecasts` | Proxies to GET /api/forecasts — lists revenue forecasts (nonce required) [implemented] |
+| `waa_get_forecast` | Proxies to GET /api/forecasts/:id — gets a specific forecast (nonce required) [implemented] |
+| `waa_delete_forecast` | Proxies to DELETE /api/forecasts/:id — deletes a forecast (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

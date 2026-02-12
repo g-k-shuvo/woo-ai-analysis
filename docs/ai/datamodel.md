@@ -195,6 +195,21 @@ CREATE TABLE scheduled_insights (
 CREATE INDEX idx_scheduled_insights_store ON scheduled_insights(store_id);
 ```
 
+### revenue_forecasts
+Cached revenue forecast computations.
+```sql
+CREATE TABLE revenue_forecasts (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id        UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  days_ahead      INTEGER NOT NULL,
+  historical_days INTEGER NOT NULL DEFAULT 90,
+  data_points     JSONB NOT NULL DEFAULT '[]',
+  summary         JSONB NOT NULL DEFAULT '{}',
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_revenue_forecasts_store ON revenue_forecasts(store_id);
+```
+
 ### sync_logs
 Track sync health and history.
 ```sql

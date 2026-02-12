@@ -56,5 +56,5 @@
 - [x] **6.3** PDF report export
 - [x] **6.4** CSV export
 - [x] **6.5** Scheduled insights (daily/weekly email)
-- [ ] **6.6** Predictive analytics (revenue forecast)
+- [x] **6.6** Predictive analytics (revenue forecast)
 - [ ] **6.7** Date range comparison (this month vs last month)
