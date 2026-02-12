@@ -8,7 +8,7 @@ import './ChatWindow.css';
 const { connected } = window.waaData || {};
 
 export default function ChatWindow() {
-	const { messages, loading, sendMessage, clearMessages } = useChat();
+	const { messages, loading, sendMessage, retryLast, clearMessages } = useChat();
 	const messagesEndRef = useRef( null );
 
 	// Auto-scroll to bottom when new messages arrive
@@ -73,6 +73,8 @@ export default function ChatWindow() {
 							key={ msg.id }
 							msg={ msg }
 							formatTime={ formatTime }
+							onRetry={ retryLast }
+							loading={ loading }
 						/>
 					) ) }
 

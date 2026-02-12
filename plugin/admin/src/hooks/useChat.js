@@ -1,4 +1,4 @@
-import { useState, useCallback } from '@wordpress/element';
+import { useState, useCallback, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 const { ajaxUrl, nonce } = window.waaData || {};
@@ -10,7 +10,8 @@ const { ajaxUrl, nonce } = window.waaData || {};
  *   role: 'user' | 'assistant' | 'error',
  *   content: string,
  *   timestamp: number,
- *   data: object|null (backend response data for assistant messages)
+ *   data: object|null (backend response data for assistant messages),
+ *   failedQuestion: string|null (the question that failed, for retry)
  * }
  */
 
@@ -22,6 +23,7 @@ function nextId() {
 export default function useChat() {
 	const [ messages, setMessages ] = useState( [] );
 	const [ loading, setLoading ] = useState( false );
+	const lastQuestionRef = useRef( null );
 
 	const sendMessage = useCallback( async ( question ) => {
 		if ( ! question || ! question.trim() ) {
@@ -29,6 +31,7 @@ export default function useChat() {
 		}
 
 		const trimmed = question.trim();
+		lastQuestionRef.current = trimmed;
 
 		// Add user message
 		const userMessage = {
@@ -37,6 +40,7 @@ export default function useChat() {
 			content: trimmed,
 			timestamp: Date.now(),
 			data: null,
+			failedQuestion: null,
 		};
 
 		setMessages( ( prev ) => [ ...prev, userMessage ] );
@@ -62,6 +66,7 @@ export default function useChat() {
 					content: result.data.answer || '',
 					timestamp: Date.now(),
 					data: result.data,
+					failedQuestion: null,
 				};
 				setMessages( ( prev ) => [ ...prev, assistantMessage ] );
 			} else {
@@ -74,6 +79,7 @@ export default function useChat() {
 					content: errorMsg,
 					timestamp: Date.now(),
 					data: null,
+					failedQuestion: trimmed,
 				};
 				setMessages( ( prev ) => [ ...prev, errorMessage ] );
 			}
@@ -87,6 +93,7 @@ export default function useChat() {
 				),
 				timestamp: Date.now(),
 				data: null,
+				failedQuestion: trimmed,
 			};
 			setMessages( ( prev ) => [ ...prev, errorMessage ] );
 		} finally {
@@ -94,9 +101,17 @@ export default function useChat() {
 		}
 	}, [] );
 
+	const retryLast = useCallback( ( question ) => {
+		if ( ! question ) {
+			return;
+		}
+		sendMessage( question );
+	}, [ sendMessage ] );
+
 	const clearMessages = useCallback( () => {
 		setMessages( [] );
+		lastQuestionRef.current = null;
 	}, [] );
 
-	return { messages, loading, sendMessage, clearMessages };
+	return { messages, loading, sendMessage, retryLast, clearMessages };
 }

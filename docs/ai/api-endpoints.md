@@ -36,7 +36,7 @@ All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
 ### Chat (AI Queries)
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/chat/query` | Send a question, get AI answer + chart. Body: `{ question, conversationId? }` |
+| POST | `/api/chat/query` | Send a question, get AI answer + chart. Body: `{ question, conversationId? }`. Rate-limited: 20 req/min per store (429 + Retry-After header) |
 | GET | `/api/chat/conversations` | List past conversations |
 | GET | `/api/chat/conversations/:id` | Get full conversation history |
 | DELETE | `/api/chat/conversations/:id` | Delete a conversation |
@@ -99,3 +99,16 @@ Error format:
   }
 }
 ```
+
+Rate limit error format (429):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "RATE_LIMIT_ERROR",
+    "message": "You've sent too many questions. Please wait a moment.",
+    "retryAfter": 15
+  }
+}
+```
+Response includes `Retry-After` header with seconds until the window resets.

@@ -1,10 +1,21 @@
 import type { FastifyInstance, FastifyError } from 'fastify';
-import { AppError } from '../utils/errors.js';
+import { AppError, RateLimitError } from '../utils/errors.js';
 import { logger } from '../utils/logger.js';
 
 export function registerErrorHandler(fastify: FastifyInstance) {
   fastify.setErrorHandler((error: FastifyError, request, reply) => {
     const requestId = request.id;
+
+    if (error instanceof RateLimitError) {
+      logger.warn(
+        { err: error, requestId, code: error.code, retryAfter: error.retryAfter },
+        `Rate limit exceeded: ${error.message}`,
+      );
+      return reply
+        .status(429)
+        .header('Retry-After', String(error.retryAfter))
+        .send(error.toJSON());
+    }
 
     if (error instanceof AppError) {
       logger.warn(

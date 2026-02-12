@@ -3,7 +3,7 @@
  *
  * POST /api/chat/query: Accepts a natural language question from the store owner,
  * orchestrates the AI pipeline via chatService, and returns the answer with optional
- * chart configuration.
+ * chart configuration. Rate-limited per store.
  *
  * GET /api/chat/suggestions: Returns suggested questions for the chat UI.
  *
@@ -12,9 +12,11 @@
 
 import type { FastifyInstance } from 'fastify';
 import type { ChatService } from '../../services/chatService.js';
+import type { RateLimiter } from '../../middleware/rateLimiter.js';
 
 export interface ChatQueryDeps {
   chatService: ChatService;
+  rateLimiter?: RateLimiter;
 }
 
 const chatQuerySchema = {
@@ -29,11 +31,17 @@ const chatQuerySchema = {
 };
 
 export async function chatQueryRoutes(fastify: FastifyInstance, deps: ChatQueryDeps) {
-  const { chatService } = deps;
+  const { chatService, rateLimiter } = deps;
 
-  // POST /api/chat/query — ask a question about store data (auth required)
+  // POST /api/chat/query — ask a question about store data (auth required, rate limited)
   fastify.post<{ Body: { question: string } }>('/api/chat/query', { schema: chatQuerySchema }, async (request, reply) => {
     const store = request.store!;
+
+    // Rate limit check (per-store)
+    if (rateLimiter) {
+      await rateLimiter.checkLimit(store.id);
+    }
+
     const { question } = request.body;
 
     const result = await chatService.ask(store.id, question);

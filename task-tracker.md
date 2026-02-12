@@ -42,7 +42,7 @@
 
 ### Sprint 5: Polish & Launch (Week 11–12)
 - [x] **5.1** Onboarding wizard — Install → Connect → Sync → First question
-- [ ] **5.2** Error handling — Graceful AI failures, sync errors, rate limits
+- [x] **5.2** Error handling — Graceful AI failures, sync errors, rate limits
 - [ ] **5.3** AI test suite — 50+ question→answer test cases
 - [ ] **5.4** Backend tests — Jest unit + integration tests
 - [ ] **5.5** Plugin tests — PHPUnit tests
