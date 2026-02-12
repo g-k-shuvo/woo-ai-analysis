@@ -537,6 +537,33 @@ describe('csvExportService', () => {
 
       expect(result).toContain('"Revenue, Q1 2026"');
     });
+
+    it('prefixes formula-triggering characters to prevent CSV injection', async () => {
+      const charts = [
+        makeChartRecord({
+          chart_config: JSON.stringify({
+            type: 'bar',
+            data: {
+              labels: ['=SUM(A1)', '+cmd|', '-1+1', '@import'],
+              datasets: [{ label: 'Value', data: [1, 2, 3, 4] }],
+            },
+          }),
+        }),
+      ];
+      builder.select.mockResolvedValueOnce(charts);
+
+      const service = createCsvExportService({
+        db: db as unknown as ServiceDeps['db'],
+      });
+
+      const result = await service.exportCsv(STORE_ID);
+
+      // Each formula-triggering value should be prefixed with a single quote
+      expect(result).toContain("'=SUM(A1)");
+      expect(result).toContain("'+cmd|");
+      expect(result).toContain("'-1+1");
+      expect(result).toContain("'@import");
+    });
   });
 
   // ── exportCsv (single chart) ──────────────────────────────────────

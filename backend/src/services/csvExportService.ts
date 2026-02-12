@@ -45,7 +45,13 @@ function escapeCsvValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '';
   }
-  const str = String(value);
+  let str = String(value);
+  // Prevent CSV injection: prefix formula-triggering characters with a single quote
+  // so spreadsheet apps (Excel, Google Sheets) treat them as text, not formulas.
+  const firstChar = str[0];
+  if (firstChar === '=' || firstChar === '+' || firstChar === '-' || firstChar === '@' || firstChar === '\t' || firstChar === '\r') {
+    str = "'" + str;
+  }
   // If the value contains commas, quotes, or newlines, wrap in quotes and escape internal quotes
   if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
     return '"' + str.replace(/"/g, '""') + '"';
