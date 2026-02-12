@@ -43,9 +43,9 @@
 ### Sprint 5: Polish & Launch (Week 11–12)
 - [x] **5.1** Onboarding wizard — Install → Connect → Sync → First question
 - [x] **5.2** Error handling — Graceful AI failures, sync errors, rate limits
-- [ ] **5.3** AI test suite — 50+ question→answer test cases
-- [ ] **5.4** Backend tests — Jest unit + integration tests
-- [ ] **5.5** Plugin tests — PHPUnit tests
+- [x] **5.3** AI test suite — 50+ question→answer test cases
+- [x] **5.4** Backend tests — Jest unit + integration tests
+- [x] **5.5** Plugin tests — PHPUnit tests
 - [ ] **5.6** WordPress.org compliance — readme.txt, screenshots, i18n
 - [ ] **5.7** Landing page
 - [ ] **5.8** Submit to WordPress.org
