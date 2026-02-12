@@ -191,7 +191,37 @@ describe('dashboardLayoutService', () => {
         service.updateGridLayout(STORE_ID, [
           { id: 'chart-1', gridX: 0, gridY: -1, gridW: 6, gridH: 4 },
         ]),
-      ).rejects.toThrow('gridY must be a non-negative number');
+      ).rejects.toThrow('gridY must be between 0 and 1000');
+    });
+
+    it('throws ValidationError for gridY above maximum (1000)', async () => {
+      const service = createDashboardLayoutService({
+        db: db as unknown as Parameters<typeof createDashboardLayoutService>[0]['db'],
+      });
+
+      await expect(
+        service.updateGridLayout(STORE_ID, [
+          { id: 'chart-1', gridX: 0, gridY: 1001, gridW: 6, gridH: 4 },
+        ]),
+      ).rejects.toThrow('gridY must be between 0 and 1000');
+    });
+
+    it('throws ValidationError when items exceed maxItems (20)', async () => {
+      const service = createDashboardLayoutService({
+        db: db as unknown as Parameters<typeof createDashboardLayoutService>[0]['db'],
+      });
+
+      const items = Array.from({ length: 21 }, (_, i) => ({
+        id: `chart-${i}`,
+        gridX: 0,
+        gridY: i * 4,
+        gridW: 6,
+        gridH: 4,
+      }));
+
+      await expect(service.updateGridLayout(STORE_ID, items)).rejects.toThrow(
+        'Cannot update more than 20 items at once',
+      );
     });
 
     it('throws ValidationError for gridW below minimum (3)', async () => {

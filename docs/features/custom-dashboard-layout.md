@@ -97,7 +97,7 @@ Response: {
 ## 8. Code Impact
 
 ### New files/modules
-- `backend/src/migrations/20260212000009_add_grid_layout_to_saved_charts.ts` — migration
+- `backend/db/migrations/20260212000012_add_grid_layout_to_saved_charts.ts` — migration
 - `backend/src/services/dashboardLayoutService.ts` — grid layout service
 - `backend/src/routes/dashboards/layout.ts` — grid layout route
 - `backend/tests/unit/services/dashboardLayoutService.test.ts`

@@ -280,6 +280,89 @@ describe('PUT /api/dashboards/grid-layout', () => {
 
     expect(response.statusCode).toBe(200);
   });
+
+  it('returns 400 when items array exceeds maxItems (20)', async () => {
+    const items = Array.from({ length: 21 }, (_, i) => ({
+      id: `chart-${i}`,
+      gridX: 0,
+      gridY: i * 4,
+      gridW: 6,
+      gridH: 4,
+    }));
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: { items },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when gridY exceeds maximum (1000)', async () => {
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: {
+        items: [{ id: 'chart-1', gridX: 0, gridY: 1001, gridW: 6, gridH: 4 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when gridX exceeds maximum (11)', async () => {
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: {
+        items: [{ id: 'chart-1', gridX: 12, gridY: 0, gridW: 3, gridH: 4 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('returns 400 when id exceeds maxLength (36)', async () => {
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: {
+        items: [{ id: 'a'.repeat(37), gridX: 0, gridY: 0, gridW: 6, gridH: 4 }],
+      },
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+
+  it('strips additional properties from body without error', async () => {
+    mockService.updateGridLayout.mockResolvedValue(undefined);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: {
+        items: [{ id: 'chart-1', gridX: 0, gridY: 0, gridW: 6, gridH: 4 }],
+        extraField: 'should-be-stripped',
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('strips additional properties from item objects without error', async () => {
+    mockService.updateGridLayout.mockResolvedValue(undefined);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/dashboards/grid-layout',
+      payload: {
+        items: [{ id: 'chart-1', gridX: 0, gridY: 0, gridW: 6, gridH: 4, extra: true }],
+      },
+    });
+
+    expect(response.statusCode).toBe(200);
+  });
 });
 
 describe('route method restrictions', () => {

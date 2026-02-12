@@ -7,6 +7,8 @@ const MAX_GRID_W = 12;
 const MIN_GRID_H = 2;
 const MAX_GRID_H = 8;
 const GRID_COLUMNS = 12;
+const MAX_GRID_Y = 1000;
+const MAX_ITEMS = 20;
 
 export interface GridLayoutItem {
   id: string;
@@ -28,6 +30,10 @@ export function createDashboardLayoutService(deps: DashboardLayoutServiceDeps) {
       throw new ValidationError('items must be a non-empty array');
     }
 
+    if (items.length > MAX_ITEMS) {
+      throw new ValidationError(`Cannot update more than ${MAX_ITEMS} items at once`);
+    }
+
     for (const item of items) {
       if (!item.id || typeof item.id !== 'string') {
         throw new ValidationError('Each item must have a valid id');
@@ -35,8 +41,8 @@ export function createDashboardLayoutService(deps: DashboardLayoutServiceDeps) {
       if (typeof item.gridX !== 'number' || item.gridX < 0) {
         throw new ValidationError('gridX must be a non-negative number');
       }
-      if (typeof item.gridY !== 'number' || item.gridY < 0) {
-        throw new ValidationError('gridY must be a non-negative number');
+      if (typeof item.gridY !== 'number' || item.gridY < 0 || item.gridY > MAX_GRID_Y) {
+        throw new ValidationError(`gridY must be between 0 and ${MAX_GRID_Y}`);
       }
       if (typeof item.gridW !== 'number' || item.gridW < MIN_GRID_W || item.gridW > MAX_GRID_W) {
         throw new ValidationError(`gridW must be between ${MIN_GRID_W} and ${MAX_GRID_W}`);

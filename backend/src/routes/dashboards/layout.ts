@@ -19,17 +19,20 @@ const updateGridLayoutSchema = {
   body: {
     type: 'object' as const,
     required: ['items'],
+    additionalProperties: false,
     properties: {
       items: {
         type: 'array' as const,
         minItems: 1,
+        maxItems: 20,
         items: {
           type: 'object' as const,
           required: ['id', 'gridX', 'gridY', 'gridW', 'gridH'],
+          additionalProperties: false,
           properties: {
-            id: { type: 'string' as const },
-            gridX: { type: 'integer' as const, minimum: 0 },
-            gridY: { type: 'integer' as const, minimum: 0 },
+            id: { type: 'string' as const, minLength: 1, maxLength: 36 },
+            gridX: { type: 'integer' as const, minimum: 0, maximum: 11 },
+            gridY: { type: 'integer' as const, minimum: 0, maximum: 1000 },
             gridW: { type: 'integer' as const, minimum: 3, maximum: 12 },
             gridH: { type: 'integer' as const, minimum: 2, maximum: 8 },
           },

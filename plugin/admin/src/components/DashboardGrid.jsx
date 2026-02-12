@@ -34,7 +34,7 @@ export default function DashboardGrid( {
 				chart: charts.find( ( c ) => c.id === chartId ),
 			};
 			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData( 'text/plain', chartId );
+			e.dataTransfer.setData( 'application/x-waa-chart', chartId );
 		},
 		[ charts ]
 	);

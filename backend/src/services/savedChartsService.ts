@@ -56,7 +56,15 @@ export interface SavedChartsServiceDeps {
 }
 
 function parseChartConfig(raw: unknown): Record<string, unknown> {
-  return typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>);
+  if (typeof raw !== 'string') {
+    return (raw as Record<string, unknown>) ?? {};
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    logger.warn({ raw: raw.substring(0, 100) }, 'Failed to parse chart_config JSON');
+    return {};
+  }
 }
 
 function toResponse(record: SavedChartRecord): SavedChartResponse {

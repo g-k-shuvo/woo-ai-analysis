@@ -1,4 +1,4 @@
-import { useCallback, useRef } from '@wordpress/element';
+import { useCallback, useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import PropTypes from 'prop-types';
 import useDashboard from '../hooks/useDashboard';
@@ -14,6 +14,14 @@ export default function Dashboard( { onNavigateToChat } ) {
 		updateGridLayout,
 	} = useDashboard();
 	const saveTimerRef = useRef( null );
+
+	useEffect( () => {
+		return () => {
+			if ( saveTimerRef.current ) {
+				clearTimeout( saveTimerRef.current );
+			}
+		};
+	}, [] );
 
 	const handleDelete = useCallback(
 		( chartId, title ) => {
