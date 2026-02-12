@@ -2,8 +2,7 @@ import { useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import useChat from '../hooks/useChat';
 import ChatInput from './ChatInput';
-import ChartRenderer from './ChartRenderer';
-import TableRenderer from './TableRenderer';
+import ChatMessage from './ChatMessage';
 import './ChatWindow.css';
 
 const { connected } = window.waaData || {};
@@ -70,47 +69,11 @@ export default function ChatWindow() {
 					) }
 
 					{ messages.map( ( msg ) => (
-						<div
+						<ChatMessage
 							key={ msg.id }
-							className={ `waa-chat__message waa-chat__message--${
-								msg.role
-							}${
-								msg.role === 'assistant' &&
-								msg.data?.chartConfig
-									? ' waa-chat__message--has-visual'
-									: ''
-							}` }
-						>
-							<div className="waa-chat__message-content">
-								{ msg.content }
-							</div>
-							{ msg.role === 'assistant' &&
-								msg.data?.chartConfig &&
-								( msg.data.chartConfig.type === 'table' ? (
-									<TableRenderer
-										config={ msg.data.chartConfig }
-									/>
-								) : (
-									<ChartRenderer
-										config={ msg.data.chartConfig }
-									/>
-								) ) }
-							{ msg.data?.rowCount !== undefined &&
-								msg.role === 'assistant' && (
-									<div className="waa-chat__message-meta">
-										{ msg.data.rowCount }{ ' ' }
-										{ msg.data.rowCount === 1
-											? __( 'row', 'woo-ai-analytics' )
-											: __( 'rows', 'woo-ai-analytics' ) }
-										{ ' · ' }
-										{ msg.data.durationMs }
-										{ __( 'ms', 'woo-ai-analytics' ) }
-									</div>
-								) }
-							<div className="waa-chat__message-time">
-								{ formatTime( msg.timestamp ) }
-							</div>
-						</div>
+							msg={ msg }
+							formatTime={ formatTime }
+						/>
 					) ) }
 
 					{ loading && (

@@ -38,7 +38,7 @@
 - [x] **4.3** AJAX handler — Plugin proxies chat requests (with nonce)
 - [x] **4.4** Chart.js integration — Client-side interactive charts
 - [x] **4.5** Server-side chart rendering — chartjs-node-canvas → PNG
-- [ ] **4.6** Chart types — Bar, line, pie, doughnut, table view
+- [x] **4.6** Chart types — Bar, line, pie, doughnut, table view
 
 ### Sprint 5: Polish & Launch (Week 11–12)
 - [ ] **5.1** Onboarding wizard — Install → Connect → Sync → First question
