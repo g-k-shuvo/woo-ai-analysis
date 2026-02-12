@@ -161,6 +161,21 @@ CREATE TABLE conversations (
 );
 ```
 
+### reports
+Generated PDF reports.
+```sql
+CREATE TABLE reports (
+  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id     UUID NOT NULL REFERENCES stores(id),
+  title        VARCHAR(255) NOT NULL,
+  status       VARCHAR(20) DEFAULT 'pending',    -- pending|generating|completed|failed
+  chart_count  INTEGER DEFAULT 0,
+  file_data    TEXT,                              -- base64-encoded PDF
+  created_at   TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_reports_store ON reports(store_id);
+```
+
 ### sync_logs
 Track sync health and history.
 ```sql

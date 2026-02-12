@@ -47,6 +47,9 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_list_charts', array( $this, 'handle_list_charts' ) );
 		add_action( 'wp_ajax_waa_delete_chart', array( $this, 'handle_delete_chart' ) );
 		add_action( 'wp_ajax_waa_update_grid_layout', array( $this, 'handle_update_grid_layout' ) );
+		add_action( 'wp_ajax_waa_generate_report', array( $this, 'handle_generate_report' ) );
+		add_action( 'wp_ajax_waa_list_reports', array( $this, 'handle_list_reports' ) );
+		add_action( 'wp_ajax_waa_download_report', array( $this, 'handle_download_report' ) );
 	}
 
 	/**
@@ -531,6 +534,245 @@ final class Ajax_Handler {
 		}
 
 		wp_send_json_success( array( 'updated' => true ) );
+	}
+
+	/**
+	 * Generate PDF report AJAX handler.
+	 *
+	 * Proxies to POST /api/reports/generate.
+	 */
+	public function handle_generate_report(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$title = isset( $_POST['title'] )
+			? sanitize_text_field( wp_unslash( $_POST['title'] ) )
+			: '';
+
+		if ( empty( $title ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Report title is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/reports/generate',
+			array(
+				'timeout' => 60,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( array( 'title' => $title ) ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Generate Report Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ( 200 !== $status_code && 201 !== $status_code ) || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to generate report.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_report_response( $body['data'] ) );
+	}
+
+	/**
+	 * List reports AJAX handler.
+	 *
+	 * Proxies to GET /api/reports.
+	 */
+	public function handle_list_reports(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/reports',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA List Reports Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load reports.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		$reports = array();
+		if ( is_array( $body['data']['reports'] ?? null ) ) {
+			foreach ( $body['data']['reports'] as $report ) {
+				$reports[] = self::sanitize_report_response( $report );
+			}
+		}
+		wp_send_json_success( array( 'reports' => $reports ) );
+	}
+
+	/**
+	 * Download report AJAX handler.
+	 *
+	 * Proxies to GET /api/reports/:id/download.
+	 * Returns the download URL for the client to open in a new tab.
+	 */
+	public function handle_download_report(): void {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return;
+		}
+
+		$report_id = isset( $_POST['reportId'] )
+			? sanitize_text_field( wp_unslash( $_POST['reportId'] ) )
+			: '';
+
+		if ( empty( $report_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Report ID is required.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/reports/' . rawurlencode( $report_id ) . '/download',
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Download Report Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+
+		if ( 200 !== $status_code ) {
+			$body      = json_decode( wp_remote_retrieve_body( $response ), true );
+			$error_msg = __( 'Failed to download report.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		// Return PDF as base64 for the client to download.
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode
+		$pdf_base64 = base64_encode( wp_remote_retrieve_body( $response ) );
+		wp_send_json_success(
+			array(
+				'pdfData'  => $pdf_base64,
+				'filename' => 'report-' . sanitize_file_name( $report_id ) . '.pdf',
+			)
+		);
+	}
+
+	/**
+	 * Sanitize a report response from the backend.
+	 *
+	 * @param mixed $data Raw report data.
+	 * @return array Sanitized report data.
+	 */
+	private static function sanitize_report_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		return array(
+			'id'         => isset( $data['id'] ) ? sanitize_text_field( $data['id'] ) : '',
+			'title'      => isset( $data['title'] ) ? sanitize_text_field( $data['title'] ) : '',
+			'status'     => isset( $data['status'] ) ? sanitize_text_field( $data['status'] ) : '',
+			'chartCount' => isset( $data['chartCount'] ) ? absint( $data['chartCount'] ) : 0,
+			'createdAt'  => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
+		);
 	}
 
 	/**
