@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { landingRoutes } from '../../src/routes/landing.js';
@@ -29,6 +29,10 @@ async function buildApp(): Promise<FastifyInstance> {
 describe('Landing page integration', () => {
   let app: FastifyInstance;
 
+  beforeEach(async () => {
+    app = await buildApp();
+  });
+
   afterEach(async () => {
     if (app) await app.close();
   });
@@ -37,14 +41,12 @@ describe('Landing page integration', () => {
 
   describe('GET / — Landing page', () => {
     it('returns 200 with text/html content type', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toMatch(/text\/html/);
     });
 
     it('returns valid HTML document with DOCTYPE, head, and body', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       const html = response.body;
 
@@ -57,21 +59,18 @@ describe('Landing page integration', () => {
     });
 
     it('includes proper meta tags', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       expect(response.body).toContain('charset="UTF-8"');
       expect(response.body).toContain('name="viewport"');
     });
 
     it('includes product name and description', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       expect(response.body).toContain('Woo AI Analytics');
       expect(response.body).toContain('WooCommerce');
     });
 
     it('includes all six feature cards', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       const features = [
         'Natural Language Queries',
@@ -87,7 +86,6 @@ describe('Landing page integration', () => {
     });
 
     it('includes the how-it-works section with 4 steps', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       expect(response.body).toContain('How It Works');
       // Check all 4 step numbers are present
@@ -97,7 +95,6 @@ describe('Landing page integration', () => {
     });
 
     it('has self-contained CSS with no external resources', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       expect(response.body).toContain('<style>');
       expect(response.body).not.toMatch(/<link[^>]+href=["']http/i);
@@ -105,7 +102,6 @@ describe('Landing page integration', () => {
     });
 
     it('is accessible without Authorization header', async () => {
-      app = await buildApp();
       const response = await app.inject({
         method: 'GET',
         url: '/',
@@ -115,7 +111,6 @@ describe('Landing page integration', () => {
     });
 
     it('returns reasonably sized response (>1KB, <100KB)', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/' });
       const size = Buffer.byteLength(response.body, 'utf-8');
       expect(size).toBeGreaterThan(1024);
@@ -127,20 +122,17 @@ describe('Landing page integration', () => {
 
   describe('GET /api/info — API info', () => {
     it('returns 200 with application/json content type', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/api/info' });
       expect(response.statusCode).toBe(200);
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
 
     it('returns valid JSON response', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/api/info' });
       expect(() => JSON.parse(response.body)).not.toThrow();
     });
 
     it('contains all required fields with correct types', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/api/info' });
       const body = JSON.parse(response.body);
 
@@ -154,7 +146,6 @@ describe('Landing page integration', () => {
     });
 
     it('returns correct product name and status', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/api/info' });
       const body = JSON.parse(response.body);
 
@@ -163,7 +154,6 @@ describe('Landing page integration', () => {
     });
 
     it('returns valid semver version', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/api/info' });
       const body = JSON.parse(response.body);
 
@@ -171,7 +161,6 @@ describe('Landing page integration', () => {
     });
 
     it('is accessible without Authorization header', async () => {
-      app = await buildApp();
       const response = await app.inject({
         method: 'GET',
         url: '/api/info',
@@ -185,7 +174,6 @@ describe('Landing page integration', () => {
 
   describe('Cross-cutting concerns', () => {
     it('landing page and info endpoint coexist in same plugin', async () => {
-      app = await buildApp();
       const [landingRes, infoRes] = await Promise.all([
         app.inject({ method: 'GET', url: '/' }),
         app.inject({ method: 'GET', url: '/api/info' }),
@@ -197,7 +185,6 @@ describe('Landing page integration', () => {
     });
 
     it('non-existent routes return 404', async () => {
-      app = await buildApp();
       const response = await app.inject({ method: 'GET', url: '/non-existent' });
       expect(response.statusCode).toBe(404);
     });

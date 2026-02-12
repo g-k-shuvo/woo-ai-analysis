@@ -1,9 +1,13 @@
 import type { FastifyInstance } from 'fastify';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../../package.json') as { version: string };
 
 export async function landingRoutes(fastify: FastifyInstance) {
   // GET / — Public landing page
   fastify.get('/', async (_request, reply) => {
-    const html = buildLandingHtml();
+    const html = buildLandingHtml(pkg.version);
     return reply.status(200).type('text/html').send(html);
   });
 
@@ -11,15 +15,15 @@ export async function landingRoutes(fastify: FastifyInstance) {
   fastify.get('/api/info', async (_request, reply) => {
     return reply.status(200).send({
       name: 'Woo AI Analytics',
-      version: '1.0.0',
+      version: pkg.version,
       description: 'AI-powered conversational analytics for WooCommerce',
       status: 'running',
-      documentation: 'https://github.com/user/woo-ai-analytics',
+      documentation: 'https://github.com/g-k-shuvo/woo-ai-analysis',
     });
   });
 }
 
-export function buildLandingHtml(): string {
+export function buildLandingHtml(version: string = pkg.version): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -183,7 +187,7 @@ export function buildLandingHtml(): string {
   </section>
 
   <footer class="footer">
-    <p>Woo AI Analytics v1.0.0 &mdash; AI-powered conversational analytics for WooCommerce</p>
+    <p>Woo AI Analytics v${version} &mdash; AI-powered conversational analytics for WooCommerce</p>
   </footer>
 </body>
 </html>`;

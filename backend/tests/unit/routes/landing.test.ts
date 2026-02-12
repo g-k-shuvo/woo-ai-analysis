@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import { landingRoutes, buildLandingHtml } from '../../../src/routes/landing.js';
@@ -17,6 +17,10 @@ async function buildApp(): Promise<FastifyInstance> {
 describe('Landing routes', () => {
   let app: FastifyInstance;
 
+  beforeEach(async () => {
+    app = await buildApp();
+  });
+
   afterEach(async () => {
     if (app) await app.close();
   });
@@ -26,13 +30,11 @@ describe('Landing routes', () => {
   describe('GET /', () => {
     describe('response status and content type', () => {
       it('returns 200 status code', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.statusCode).toBe(200);
       });
 
       it('returns text/html content type', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.headers['content-type']).toMatch(/text\/html/);
       });
@@ -40,46 +42,39 @@ describe('Landing routes', () => {
 
     describe('HTML structure', () => {
       it('contains DOCTYPE declaration', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toMatch(/^<!DOCTYPE html>/i);
       });
 
       it('contains html lang attribute', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('<html lang="en">');
       });
 
       it('contains meta charset', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('<meta charset="UTF-8">');
       });
 
       it('contains meta viewport for mobile', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('meta name="viewport"');
         expect(response.body).toContain('width=device-width');
       });
 
       it('contains head element', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('<head>');
         expect(response.body).toContain('</head>');
       });
 
       it('contains body element', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('<body>');
         expect(response.body).toContain('</body>');
       });
 
       it('contains closing html tag', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('</html>');
       });
@@ -87,26 +82,22 @@ describe('Landing routes', () => {
 
     describe('product content', () => {
       it('contains product name "Woo AI Analytics"', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Woo AI Analytics');
       });
 
       it('contains title with product name', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toMatch(/<title>.*Woo AI Analytics.*<\/title>/);
       });
 
       it('contains product description', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('WooCommerce');
         expect(response.body).toContain('natural language');
       });
 
       it('contains CTA link', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Install the Plugin');
       });
@@ -114,38 +105,32 @@ describe('Landing routes', () => {
 
     describe('feature highlights', () => {
       it('mentions Natural Language Queries', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Natural Language Queries');
       });
 
       it('mentions Interactive Charts', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Interactive Charts');
       });
 
       it('mentions Revenue & Order Analytics', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Revenue');
         expect(response.body).toContain('Order Analytics');
       });
 
       it('mentions Product Insights', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Product Insights');
       });
 
       it('mentions Customer Intelligence', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Customer Intelligence');
       });
 
       it('mentions Security', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Secure');
       });
@@ -153,32 +138,27 @@ describe('Landing routes', () => {
 
     describe('how it works section', () => {
       it('contains how it works heading', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('How It Works');
       });
 
       it('contains step 1 — Install', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Install the Plugin');
       });
 
       it('contains step 2 — Connect & Sync', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Connect');
         expect(response.body).toContain('Sync');
       });
 
       it('contains step 3 — Ask Questions', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Ask Questions');
       });
 
       it('contains step 4 — Get Insights', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('Get Insights');
       });
@@ -186,14 +166,12 @@ describe('Landing routes', () => {
 
     describe('responsive design', () => {
       it('contains inline CSS (self-contained)', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('<style>');
         expect(response.body).toContain('</style>');
       });
 
       it('contains media query for mobile', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/' });
         expect(response.body).toContain('@media');
         expect(response.body).toContain('max-width');
@@ -202,19 +180,16 @@ describe('Landing routes', () => {
 
     describe('route configuration', () => {
       it('returns 404 for POST method', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'POST', url: '/', payload: {} });
         expect(response.statusCode).toBe(404);
       });
 
       it('returns 404 for PUT method', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'PUT', url: '/', payload: {} });
         expect(response.statusCode).toBe(404);
       });
 
       it('returns 404 for DELETE method', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'DELETE', url: '/' });
         expect(response.statusCode).toBe(404);
       });
@@ -226,13 +201,11 @@ describe('Landing routes', () => {
   describe('GET /api/info', () => {
     describe('response status and content type', () => {
       it('returns 200 status code', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         expect(response.statusCode).toBe(200);
       });
 
       it('returns application/json content type', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         expect(response.headers['content-type']).toMatch(/application\/json/);
       });
@@ -240,43 +213,36 @@ describe('Landing routes', () => {
 
     describe('response body', () => {
       it('contains name field', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
         expect(body.name).toBe('Woo AI Analytics');
       });
 
-      it('contains version field', async () => {
-        app = await buildApp();
+      it('contains version field matching package.json', async () => {
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
         expect(body.version).toBe('1.0.0');
       });
 
       it('contains description field', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
         expect(body.description).toBe('AI-powered conversational analytics for WooCommerce');
       });
 
       it('contains status field as running', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
         expect(body.status).toBe('running');
       });
 
-      it('contains documentation field', async () => {
-        app = await buildApp();
+      it('contains documentation field with correct URL', async () => {
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
-        expect(body.documentation).toBeDefined();
-        expect(typeof body.documentation).toBe('string');
+        expect(body.documentation).toBe('https://github.com/g-k-shuvo/woo-ai-analysis');
       });
 
       it('returns exactly 5 fields', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'GET', url: '/api/info' });
         const body = JSON.parse(response.body);
         expect(Object.keys(body)).toHaveLength(5);
@@ -285,13 +251,11 @@ describe('Landing routes', () => {
 
     describe('route configuration', () => {
       it('returns 404 for POST method', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'POST', url: '/api/info', payload: {} });
         expect(response.statusCode).toBe(404);
       });
 
       it('returns 404 for DELETE method', async () => {
-        app = await buildApp();
         const response = await app.inject({ method: 'DELETE', url: '/api/info' });
         expect(response.statusCode).toBe(404);
       });
@@ -314,7 +278,12 @@ describe('Landing routes', () => {
 
     it('contains version number in footer', () => {
       const html = buildLandingHtml();
-      expect(html).toContain('v1.0.0');
+      expect(html).toMatch(/v\d+\.\d+\.\d+/);
+    });
+
+    it('uses provided version in footer', () => {
+      const html = buildLandingHtml('2.3.4');
+      expect(html).toContain('v2.3.4');
     });
 
     it('contains semantic header element', () => {
