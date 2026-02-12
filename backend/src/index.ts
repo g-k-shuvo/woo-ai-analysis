@@ -36,6 +36,8 @@ import { createCsvExportService } from './services/csvExportService.js';
 import { csvExportRoutes } from './routes/exports/csv.js';
 import { createScheduledInsightsService } from './services/scheduledInsightsService.js';
 import { scheduledInsightsRoutes } from './routes/scheduledInsights/index.js';
+import { createRevenueForecastService } from './services/revenueForecastService.js';
+import { forecastRoutes } from './routes/forecasts/index.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -109,6 +111,9 @@ const csvExportService = createCsvExportService({ db });
 // Scheduled insights service
 const scheduledInsightsService = createScheduledInsightsService({ db });
 
+// Revenue forecast service
+const revenueForecastService = createRevenueForecastService({ db, readonlyDb });
+
 // Rate limiter
 const rateLimiter = createRateLimiter({
   redis,
@@ -181,6 +186,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => scheduledInsightsRoutes(instance, { scheduledInsightsService }),
+);
+
+await fastify.register(
+  async (instance) => forecastRoutes(instance, { revenueForecastService }),
 );
 
 // Graceful shutdown
