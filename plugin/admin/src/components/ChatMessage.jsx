@@ -6,7 +6,7 @@ import TableRenderer from './TableRenderer';
 import ChartTypeSelector from './ChartTypeSelector';
 import convertChartType from '../utils/convertChartType';
 
-export default function ChatMessage( { msg, formatTime } ) {
+export default function ChatMessage( { msg, formatTime, onRetry, loading } ) {
 	const hasChart = msg.role === 'assistant' && msg.data?.chartConfig;
 	const hasMeta = msg.data?.chartMeta;
 	const [ activeConfig, setActiveConfig ] = useState(
@@ -37,6 +37,12 @@ export default function ChatMessage( { msg, formatTime } ) {
 		[ activeConfig, msg.data ]
 	);
 
+	const handleRetry = useCallback( () => {
+		if ( msg.failedQuestion && onRetry ) {
+			onRetry( msg.failedQuestion );
+		}
+	}, [ msg.failedQuestion, onRetry ] );
+
 	return (
 		<div
 			className={ `waa-chat__message waa-chat__message--${ msg.role }${
@@ -44,6 +50,16 @@ export default function ChatMessage( { msg, formatTime } ) {
 			}` }
 		>
 			<div className="waa-chat__message-content">{ msg.content }</div>
+			{ msg.role === 'error' && msg.failedQuestion && onRetry && (
+				<button
+					type="button"
+					className="button button-small waa-chat__retry-btn"
+					onClick={ handleRetry }
+					disabled={ loading }
+				>
+					{ __( 'Retry', 'woo-ai-analytics' ) }
+				</button>
+			) }
 			{ hasChart && hasMeta && activeType && (
 				<ChartTypeSelector
 					activeType={ activeType }
@@ -82,6 +98,9 @@ ChatMessage.propTypes = {
 		content: PropTypes.string.isRequired,
 		timestamp: PropTypes.number.isRequired,
 		data: PropTypes.object,
+		failedQuestion: PropTypes.string,
 	} ).isRequired,
 	formatTime: PropTypes.func.isRequired,
+	onRetry: PropTypes.func,
+	loading: PropTypes.bool,
 };

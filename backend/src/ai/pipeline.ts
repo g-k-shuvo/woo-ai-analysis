@@ -20,6 +20,9 @@ const OPENAI_TEMPERATURE = 0;
 const OPENAI_TIMEOUT_MS = 30_000;
 const MAX_QUESTION_LENGTH = 2000;
 
+const OPENAI_MAX_RETRIES = 3;
+const OPENAI_RETRY_BASE_MS = 1000;
+
 export interface PipelineDeps {
   openai: OpenAI;
   schemaContextService: SchemaContextService;
@@ -55,37 +58,8 @@ export function createAIQueryPipeline(deps: PipelineDeps) {
       const storeContext = await schemaContextService.getStoreContext(storeId);
       const systemPrompt = buildSystemPrompt(storeContext);
 
-      // Step 2: Call OpenAI with JSON response format and timeout
-      let rawContent: string;
-      try {
-        const completion = await openai.chat.completions.create(
-          {
-            model: OPENAI_MODEL,
-            temperature: OPENAI_TEMPERATURE,
-            max_tokens: OPENAI_MAX_TOKENS,
-            response_format: { type: 'json_object' },
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: trimmedQuestion },
-            ],
-          },
-          { timeout: OPENAI_TIMEOUT_MS },
-        );
-
-        const choice = completion.choices[0];
-        if (!choice?.message?.content) {
-          throw new AIError('OpenAI returned an empty response');
-        }
-
-        rawContent = choice.message.content;
-      } catch (err) {
-        if (err instanceof AIError) throw err;
-        if (err instanceof ValidationError) throw err;
-
-        throw new AIError('Failed to get response from OpenAI', {
-          cause: err instanceof Error ? err : new Error(String(err)),
-        });
-      }
+      // Step 2: Call OpenAI with JSON response format, timeout, and retry logic
+      const rawContent = await callOpenAIWithRetry(openai, systemPrompt, trimmedQuestion, storeId);
 
       // Step 3: Parse JSON response
       const parsed = parseOpenAIResponse(rawContent);
@@ -128,6 +102,91 @@ export function createAIQueryPipeline(deps: PipelineDeps) {
 }
 
 export type AIQueryPipeline = ReturnType<typeof createAIQueryPipeline>;
+
+/**
+ * Determines if an OpenAI error is retryable (429 rate limit, 5xx server error, or timeout).
+ */
+export function isRetryableError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+
+  const error = err as Record<string, unknown>;
+
+  // OpenAI SDK errors have a status property
+  if (typeof error.status === 'number') {
+    return error.status === 429 || error.status >= 500;
+  }
+
+  // Timeout errors
+  if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET' || error.code === 'ECONNABORTED') {
+    return true;
+  }
+
+  // AbortError from timeout
+  const message = typeof error.message === 'string' ? error.message : '';
+  if (/timeout|timed?\s*out|aborted/i.test(message)) {
+    return true;
+  }
+
+  return false;
+}
+
+async function callOpenAIWithRetry(
+  openai: OpenAI,
+  systemPrompt: string,
+  question: string,
+  storeId: string,
+): Promise<string> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= OPENAI_MAX_RETRIES; attempt++) {
+    try {
+      const completion = await openai.chat.completions.create(
+        {
+          model: OPENAI_MODEL,
+          temperature: OPENAI_TEMPERATURE,
+          max_tokens: OPENAI_MAX_TOKENS,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question },
+          ],
+        },
+        { timeout: OPENAI_TIMEOUT_MS },
+      );
+
+      const choice = completion.choices[0];
+      if (!choice?.message?.content) {
+        throw new AIError('OpenAI returned an empty response');
+      }
+
+      return choice.message.content;
+    } catch (err) {
+      if (err instanceof AIError) throw err;
+      if (err instanceof ValidationError) throw err;
+
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (attempt < OPENAI_MAX_RETRIES && isRetryableError(err)) {
+        const delayMs = OPENAI_RETRY_BASE_MS * Math.pow(2, attempt);
+        const jitterMs = Math.random() * 1000;
+        const delayWithJitterMs = delayMs + jitterMs;
+        logger.warn(
+          { storeId, attempt: attempt + 1, maxRetries: OPENAI_MAX_RETRIES, delayMs: Math.round(delayWithJitterMs) },
+          'OpenAI call failed — retrying',
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayWithJitterMs));
+        continue;
+      }
+
+      break;
+    }
+  }
+
+  throw new AIError(
+    'Our AI service is temporarily unavailable. Please try again in a moment.',
+    { cause: lastError },
+  );
+}
 
 function parseOpenAIResponse(raw: string): OpenAIResponse {
   // Strip markdown code fences if present (```json ... ```, ```sql ... ```, etc.)

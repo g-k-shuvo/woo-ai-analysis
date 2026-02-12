@@ -20,6 +20,10 @@ export interface AppConfig {
   openai: {
     apiKey: string;
   };
+  rateLimit: {
+    chatMaxRequests: number;
+    chatWindowSeconds: number;
+  };
 }
 
 function requireEnv(key: string, defaultValue?: string): string {
@@ -51,6 +55,10 @@ export function loadConfig(): AppConfig {
     },
     openai: {
       apiKey: requireEnv('OPENAI_API_KEY', ''),
+    },
+    rateLimit: {
+      chatMaxRequests: parseInt(requireEnv('RATE_LIMIT_CHAT_MAX', '20'), 10),
+      chatWindowSeconds: parseInt(requireEnv('RATE_LIMIT_CHAT_WINDOW', '60'), 10),
     },
   };
 }

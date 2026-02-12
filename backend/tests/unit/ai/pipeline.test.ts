@@ -318,6 +318,7 @@ describe('createAIQueryPipeline', () => {
   // ── OpenAI error handling ────────────────────────────────
   describe('OpenAI error handling', () => {
     it('wraps OpenAI network errors with AIError', async () => {
+      jest.useFakeTimers();
       mockOpenAI.chat.completions.create.mockRejectedValue(
         new Error('Connection timeout'),
       );
@@ -327,9 +328,18 @@ describe('createAIQueryPipeline', () => {
         schemaContextService: mockSchemaContext,
       });
 
-      await expect(
-        pipeline.processQuestion(VALID_STORE_ID, 'What is my revenue?'),
-      ).rejects.toThrow('Failed to get response from OpenAI');
+      const promise = pipeline.processQuestion(VALID_STORE_ID, 'What is my revenue?');
+
+      // Advance timers through retry delays
+      for (let i = 0; i < 10; i++) {
+        jest.advanceTimersByTime(10_000);
+        await Promise.resolve();
+      }
+
+      await expect(promise).rejects.toThrow(
+        'Our AI service is temporarily unavailable. Please try again in a moment.',
+      );
+      jest.useRealTimers();
     });
 
     it('handles empty response from OpenAI', async () => {

@@ -87,6 +87,35 @@ describe('Error Classes', () => {
       expect(error.statusCode).toBe(429);
       expect(error.code).toBe('RATE_LIMIT_ERROR');
     });
+
+    it('defaults retryAfter to 60', () => {
+      const error = new RateLimitError();
+      expect(error.retryAfter).toBe(60);
+    });
+
+    it('accepts custom retryAfter', () => {
+      const error = new RateLimitError('Too many', { retryAfter: 30 });
+      expect(error.retryAfter).toBe(30);
+    });
+
+    it('serializes to JSON with retryAfter', () => {
+      const error = new RateLimitError('Slow down', { retryAfter: 15 });
+      const json = error.toJSON();
+      expect(json).toEqual({
+        success: false,
+        error: {
+          code: 'RATE_LIMIT_ERROR',
+          message: 'Slow down',
+          retryAfter: 15,
+        },
+      });
+    });
+
+    it('preserves cause', () => {
+      const cause = new Error('upstream');
+      const error = new RateLimitError('Rate limited', { cause });
+      expect(error.cause).toBe(cause);
+    });
   });
 
   describe('AIError', () => {

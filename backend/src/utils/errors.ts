@@ -62,12 +62,26 @@ export class NotFoundError extends AppError {
 }
 
 export class RateLimitError extends AppError {
-  constructor(message = 'Rate limit exceeded', options: { cause?: Error } = {}) {
+  public readonly retryAfter: number;
+
+  constructor(message = 'Rate limit exceeded', options: { cause?: Error; retryAfter?: number } = {}) {
     super(message, {
       statusCode: 429,
       code: 'RATE_LIMIT_ERROR',
-      ...options,
+      cause: options.cause,
     });
+    this.retryAfter = options.retryAfter ?? 60;
+  }
+
+  toJSON() {
+    return {
+      success: false,
+      error: {
+        code: this.code,
+        message: this.message,
+        retryAfter: this.retryAfter,
+      },
+    };
   }
 }
 

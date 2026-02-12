@@ -23,6 +23,7 @@ import { createChatService } from './services/chatService.js';
 import { createAIQueryPipeline } from './ai/pipeline.js';
 import { createSchemaContextService } from './ai/schemaContext.js';
 import { createQueryExecutor } from './ai/queryExecutor.js';
+import { createRateLimiter } from './middleware/rateLimiter.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -82,6 +83,15 @@ const aiPipeline = createAIQueryPipeline({ openai, schemaContextService });
 const queryExecutor = createQueryExecutor({ readonlyDb });
 const chatService = createChatService({ aiPipeline, queryExecutor });
 
+// Rate limiter
+const rateLimiter = createRateLimiter({
+  redis,
+  config: {
+    maxRequests: config.rateLimit.chatMaxRequests,
+    windowSeconds: config.rateLimit.chatWindowSeconds,
+  },
+});
+
 // Routes
 await fastify.register(
   async (instance) => healthRoutes(instance, { db, redis, startTime }),
@@ -120,7 +130,7 @@ await fastify.register(
 );
 
 await fastify.register(
-  async (instance) => chatQueryRoutes(instance, { chatService }),
+  async (instance) => chatQueryRoutes(instance, { chatService, rateLimiter }),
 );
 
 // Graceful shutdown
