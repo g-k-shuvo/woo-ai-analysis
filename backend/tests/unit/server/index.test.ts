@@ -133,6 +133,10 @@ jest.unstable_mockModule('../../../src/middleware/rateLimiter.js', () => ({
   createRateLimiter: mockCreateRateLimiter,
 }));
 
+jest.unstable_mockModule('../../../src/routes/landing.js', () => ({
+  landingRoutes: jest.fn(),
+}));
+
 jest.unstable_mockModule('../../../src/routes/health.js', () => ({
   healthRoutes: jest.fn(),
 }));
@@ -247,9 +251,9 @@ describe('Server initialization', () => {
 
   describe('route registration', () => {
     it('registers at least the expected number of route groups', () => {
-      // 10 route groups: health, stores, sync (orders, products, customers, categories,
-      // webhook, status, errors), chat
-      expect(mockRegister.mock.calls.length).toBeGreaterThanOrEqual(10);
+      // 11 route groups: landing, health, stores, sync (orders, products, customers,
+      // categories, webhook, status, errors), chat
+      expect(mockRegister.mock.calls.length).toBeGreaterThanOrEqual(11);
     });
   });
 

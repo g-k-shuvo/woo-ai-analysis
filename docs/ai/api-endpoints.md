@@ -4,7 +4,13 @@
 
 Base URL: `https://api.wooaianalytics.com` (production) / `http://localhost:3000` (local)
 
-All endpoints except `/health` require `Authorization: Bearer <api_key>` header.
+All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` require `Authorization: Bearer <api_key>` header.
+
+### Landing & Info
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Public landing page (HTML), product info and features |
+| GET | `/api/info` | Public API info: `{ name, version, description, status, documentation }` |
 
 ### Health
 | Method | Path | Description |
