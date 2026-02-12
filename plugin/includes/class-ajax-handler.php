@@ -97,8 +97,10 @@ final class Ajax_Handler {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Backend Error: ' . $response->get_error_message() );
 			wp_send_json_error(
-				array( 'message' => $response->get_error_message() )
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
 			);
 			return;
 		}
@@ -115,7 +117,7 @@ final class Ajax_Handler {
 			return;
 		}
 
-		wp_send_json_success( $body['data'] );
+		wp_send_json_success( self::sanitize_chat_response( $body['data'] ) );
 	}
 
 	/**
@@ -156,8 +158,10 @@ final class Ajax_Handler {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Suggestions Error: ' . $response->get_error_message() );
 			wp_send_json_error(
-				array( 'message' => $response->get_error_message() )
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
 			);
 			return;
 		}
@@ -181,6 +185,65 @@ final class Ajax_Handler {
 			}
 		}
 		wp_send_json_success( array( 'suggestions' => $suggestions ) );
+	}
+
+	/**
+	 * Sanitize the chat response data from the SaaS backend.
+	 *
+	 * @param mixed $data Raw response data.
+	 * @return array Sanitized response.
+	 */
+	private static function sanitize_chat_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		$safe = array(
+			'answer'     => isset( $data['answer'] ) ? sanitize_text_field( $data['answer'] ) : '',
+			'sql'        => isset( $data['sql'] ) ? sanitize_text_field( $data['sql'] ) : '',
+			'rowCount'   => isset( $data['rowCount'] ) ? absint( $data['rowCount'] ) : 0,
+			'durationMs' => isset( $data['durationMs'] ) ? absint( $data['durationMs'] ) : 0,
+		);
+
+		// Sanitize chart config if present.
+		if ( isset( $data['chartConfig'] ) && is_array( $data['chartConfig'] ) ) {
+			$safe['chartConfig'] = self::sanitize_chart_config( $data['chartConfig'] );
+		} else {
+			$safe['chartConfig'] = null;
+		}
+
+		return $safe;
+	}
+
+	/**
+	 * Sanitize a chart config object recursively.
+	 *
+	 * @param array $config Raw chart config.
+	 * @return array Sanitized chart config.
+	 */
+	private static function sanitize_chart_config( array $config ): array {
+		return self::sanitize_recursive( $config );
+	}
+
+	/**
+	 * Recursively sanitize an array — sanitize strings, keep numbers/bools, recurse arrays.
+	 *
+	 * @param array $data Input data.
+	 * @return array Sanitized data.
+	 */
+	private static function sanitize_recursive( array $data ): array {
+		$result = array();
+		foreach ( $data as $key => $value ) {
+			$safe_key = is_string( $key ) ? sanitize_text_field( $key ) : $key;
+			if ( is_array( $value ) ) {
+				$result[ $safe_key ] = self::sanitize_recursive( $value );
+			} elseif ( is_string( $value ) ) {
+				$result[ $safe_key ] = sanitize_text_field( $value );
+			} elseif ( is_int( $value ) || is_float( $value ) || is_bool( $value ) || is_null( $value ) ) {
+				$result[ $safe_key ] = $value;
+			}
+		}
+		return $result;
 	}
 
 	/**

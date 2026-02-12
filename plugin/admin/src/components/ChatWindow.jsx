@@ -72,25 +72,29 @@ export default function ChatWindow() {
 					{ messages.map( ( msg ) => (
 						<div
 							key={ msg.id }
-							className={ `waa-chat__message waa-chat__message--${ msg.role }` }
+							className={ `waa-chat__message waa-chat__message--${
+								msg.role
+							}${
+								msg.role === 'assistant' &&
+								msg.data?.chartConfig
+									? ' waa-chat__message--has-visual'
+									: ''
+							}` }
 						>
 							<div className="waa-chat__message-content">
 								{ msg.content }
 							</div>
 							{ msg.role === 'assistant' &&
 								msg.data?.chartConfig &&
-								msg.data.chartConfig.type === 'table' && (
+								( msg.data.chartConfig.type === 'table' ? (
 									<TableRenderer
 										config={ msg.data.chartConfig }
 									/>
-								) }
-							{ msg.role === 'assistant' &&
-								msg.data?.chartConfig &&
-								msg.data.chartConfig.type !== 'table' && (
+								) : (
 									<ChartRenderer
 										config={ msg.data.chartConfig }
 									/>
-								) }
+								) ) }
 							{ msg.data?.rowCount !== undefined &&
 								msg.role === 'assistant' && (
 									<div className="waa-chat__message-meta">

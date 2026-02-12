@@ -13,11 +13,15 @@ export default function TableRenderer( { config } ) {
 				<div className="waa-table__title">{ config.title }</div>
 			) }
 			<div className="waa-table__scroll">
-				<table>
+				<table
+					aria-label={
+						config.title || __( 'Data table', 'woo-ai-analytics' )
+					}
+				>
 					<thead>
 						<tr>
-							{ config.headers.map( ( header ) => (
-								<th key={ header }>{ header }</th>
+							{ config.headers.map( ( header, index ) => (
+								<th key={ index }>{ header }</th>
 							) ) }
 						</tr>
 					</thead>
@@ -36,10 +40,7 @@ export default function TableRenderer( { config } ) {
 								<tr key={ rowIndex }>
 									{ row.map( ( cell, cellIndex ) => (
 										<td key={ cellIndex }>
-											{ cell !== null &&
-											cell !== undefined
-												? String( cell )
-												: '' }
+											{ String( cell ?? '' ) }
 										</td>
 									) ) }
 								</tr>

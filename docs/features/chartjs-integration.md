@@ -110,7 +110,7 @@ msg.data.chartConfig (from useChat hook)
 ## 11. Checklist
 - [x] Plan reviewed
 - [x] Feature spec approved
-- [x] Tests added/updated
+- [ ] Tests added/updated (backend tests pre-existing; no frontend unit tests — see Out of Scope)
 - [x] Lint/test/build pass
 - [ ] Docs updated
 - [ ] PR raised

@@ -142,7 +142,6 @@
 }
 
 /* Widen assistant messages that contain charts or tables */
-.waa-chat__message--assistant:has(.waa-chart),
-.waa-chat__message--assistant:has(.waa-table) {
+.waa-chat__message--has-visual {
 	max-width: 100%;
 }

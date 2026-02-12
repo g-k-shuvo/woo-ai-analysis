@@ -1,4 +1,5 @@
-import { useRef, useEffect } from '@wordpress/element';
+import { useRef, useEffect, useState } from '@wordpress/element';
+import { __ } from '@wordpress/i18n';
 import { Chart, registerables } from 'chart.js';
 import PropTypes from 'prop-types';
 import './ChartRenderer.css';
@@ -6,23 +7,28 @@ import './ChartRenderer.css';
 // Register all Chart.js components (bar, line, pie, doughnut, scales, etc.)
 Chart.register( ...registerables );
 
+const ALLOWED_TYPES = [ 'bar', 'line', 'pie', 'doughnut' ];
+
 export default function ChartRenderer( { config } ) {
 	const canvasRef = useRef( null );
 	const chartRef = useRef( null );
+	const [ error, setError ] = useState( false );
 
 	useEffect( () => {
 		if ( ! canvasRef.current || ! config ) {
 			return;
 		}
 
-		// Destroy previous chart instance if it exists
-		if ( chartRef.current ) {
-			chartRef.current.destroy();
-			chartRef.current = null;
+		setError( false );
+
+		if ( ! ALLOWED_TYPES.includes( config.type ) ) {
+			setError( true );
+			return;
 		}
 
+		let chart;
 		try {
-			chartRef.current = new Chart( canvasRef.current, {
+			chart = new Chart( canvasRef.current, {
 				type: config.type,
 				data: config.data,
 				options: {
@@ -31,16 +37,18 @@ export default function ChartRenderer( { config } ) {
 					maintainAspectRatio: true,
 				},
 			} );
+			chartRef.current = chart;
 		} catch ( e ) {
 			// eslint-disable-next-line no-console
 			console.error( 'ChartRenderer: failed to create chart', e );
+			setError( true );
 		}
 
 		return () => {
-			if ( chartRef.current ) {
-				chartRef.current.destroy();
-				chartRef.current = null;
+			if ( chart ) {
+				chart.destroy();
 			}
+			chartRef.current = null;
 		};
 	}, [ config ] );
 
@@ -48,9 +56,24 @@ export default function ChartRenderer( { config } ) {
 		return null;
 	}
 
+	if ( error ) {
+		return (
+			<div className="waa-chart waa-chart--error">
+				{ __( 'Unable to render chart.', 'woo-ai-analytics' ) }
+			</div>
+		);
+	}
+
 	return (
 		<div className="waa-chart">
-			<canvas ref={ canvasRef } />
+			<canvas
+				ref={ canvasRef }
+				role="img"
+				aria-label={
+					config.options?.plugins?.title?.text ||
+					__( 'Chart', 'woo-ai-analytics' )
+				}
+			/>
 		</div>
 	);
 }

@@ -9,5 +9,9 @@
 
 .waa-chart canvas {
 	max-width: 100%;
-	height: auto;
+}
+
+.waa-chart--error {
+	color: #d63638;
+	font-size: 13px;
 }

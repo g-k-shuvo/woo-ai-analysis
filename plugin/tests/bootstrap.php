@@ -150,6 +150,13 @@ function current_user_can( string $capability, ...$args ): bool {
 }
 
 /**
+ * Stub: absint.
+ */
+function absint( mixed $maybeint ): int {
+	return abs( (int) $maybeint );
+}
+
+/**
  * Stub: sanitize_text_field.
  */
 function sanitize_text_field( string $str ): string {
