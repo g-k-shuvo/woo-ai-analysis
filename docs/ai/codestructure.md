@@ -61,6 +61,7 @@ woo-ai-analytics/
 │   │   ├── index.ts                   # Fastify server entry point
 │   │   ├── config.ts                  # Environment config loader
 │   │   ├── routes/
+│   │   │   ├── landing.ts            # GET / (landing page HTML) + GET /api/info (JSON) [implemented]
 │   │   │   ├── health.ts             # GET /health
 │   │   │   ├── stores.ts             # POST /api/stores/connect, GET /status, DELETE /disconnect
 │   │   │   ├── sync/
@@ -128,7 +129,8 @@ woo-ai-analytics/
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
 │   │   │   ├── routes/
-│   │   │   │   ├── health.test.ts          # Health route unit tests [implemented]
+│   │   │   │   ├── landing.test.ts          # Landing page + /api/info unit tests [implemented]
+│   │   │   ├── health.test.ts          # Health route unit tests [implemented]
 │   │   │   │   ├── storeConnect.test.ts    # Store connect/status/disconnect unit tests [implemented]
 │   │   │   │   ├── onboardingStatus.test.ts # Onboarding status unit tests [implemented]
 │   │   │   │   ├── chatQuery.test.ts       # Chat query + suggestions unit tests [implemented]
@@ -156,6 +158,7 @@ woo-ai-analytics/
 │   │   │   ├── customerQueries.test.ts  # Customer query integration tests [implemented]
 │   │   │   ├── orderQueries.test.ts     # Order query integration tests [implemented]
 │   │   │   ├── chartSpec.test.ts       # Chart spec converter integration tests [implemented]
+│   │   │   ├── landing.test.ts        # Landing page integration tests [implemented]
 │   │   │   ├── chartRenderer.test.ts  # Server-side chart renderer integration tests [implemented]
 │   │   │   ├── chartTypeConverter.test.ts # Chart type converter integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests

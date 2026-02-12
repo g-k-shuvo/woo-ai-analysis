@@ -34,7 +34,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance, deps: AuthDeps)
       const routePath = request.routeOptions?.url ?? request.url.split('?')[0];
 
       // Skip auth for health check and connect endpoint
-      const skipPaths = ['/health', '/api/stores/connect'];
+      const skipPaths = ['/health', '/api/stores/connect', '/api/info'];
       if (skipPaths.includes(routePath)) {
         return;
       }

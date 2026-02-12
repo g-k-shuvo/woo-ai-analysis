@@ -24,6 +24,7 @@ import { createAIQueryPipeline } from './ai/pipeline.js';
 import { createSchemaContextService } from './ai/schemaContext.js';
 import { createQueryExecutor } from './ai/queryExecutor.js';
 import { createRateLimiter } from './middleware/rateLimiter.js';
+import { landingRoutes } from './routes/landing.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -93,6 +94,10 @@ const rateLimiter = createRateLimiter({
 });
 
 // Routes
+await fastify.register(
+  async (instance) => landingRoutes(instance),
+);
+
 await fastify.register(
   async (instance) => healthRoutes(instance, { db, redis, startTime }),
 );
