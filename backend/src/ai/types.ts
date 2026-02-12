@@ -70,3 +70,9 @@ export interface TableResult {
 }
 
 export type ChartSpecResult = ChartConfiguration | TableResult;
+
+export interface ChartRenderOptions {
+  width?: number;
+  height?: number;
+  backgroundColour?: string;
+}

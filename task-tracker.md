@@ -37,7 +37,7 @@
 - [x] **4.2** Chat input — Message box + send + suggested questions
 - [x] **4.3** AJAX handler — Plugin proxies chat requests (with nonce)
 - [x] **4.4** Chart.js integration — Client-side interactive charts
-- [ ] **4.5** Server-side chart rendering — chartjs-node-canvas → PNG
+- [x] **4.5** Server-side chart rendering — chartjs-node-canvas → PNG
 - [ ] **4.6** Chart types — Bar, line, pie, doughnut, table view
 
 ### Sprint 5: Polish & Launch (Week 11–12)

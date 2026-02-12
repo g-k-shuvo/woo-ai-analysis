@@ -28,6 +28,7 @@ function makeResponse(overrides: Partial<ChatResponse> = {}): ChatResponse {
     durationMs: 42,
     chartSpec: null,
     chartConfig: null,
+    chartImage: null,
     ...overrides,
   };
 }

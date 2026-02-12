@@ -11,6 +11,7 @@
 
 import type { AIQueryPipeline } from '../ai/pipeline.js';
 import type { QueryExecutor } from '../ai/queryExecutor.js';
+import type { ChartRenderer } from './chartRenderer.js';
 import { toChartConfig } from '../ai/chartSpec.js';
 import type { ChartSpecResult } from '../ai/types.js';
 import { ValidationError } from '../utils/errors.js';
@@ -19,6 +20,7 @@ import { logger } from '../utils/logger.js';
 export interface ChatServiceDeps {
   aiPipeline: AIQueryPipeline;
   queryExecutor: QueryExecutor;
+  chartRenderer?: ChartRenderer;
 }
 
 export interface ChatResponse {
@@ -29,6 +31,7 @@ export interface ChatResponse {
   durationMs: number;
   chartSpec: ChatSpecSummary | null;
   chartConfig: ChartSpecResult | null;
+  chartImage: string | null;
 }
 
 export interface ChatSpecSummary {
@@ -50,7 +53,7 @@ const DEFAULT_SUGGESTIONS: string[] = [
 ];
 
 export function createChatService(deps: ChatServiceDeps) {
-  const { aiPipeline, queryExecutor } = deps;
+  const { aiPipeline, queryExecutor, chartRenderer } = deps;
 
   async function ask(storeId: string, question: string): Promise<ChatResponse> {
     if (!question || !question.trim()) {
@@ -68,6 +71,12 @@ export function createChatService(deps: ChatServiceDeps) {
     // Step 3: Generate chart config from results (if chart spec provided)
     const chartConfig = toChartConfig(queryResult.chartSpec, executionResult.rows);
 
+    // Step 4: Render chart to PNG data URI (if chart config and renderer available)
+    let chartImage: string | null = null;
+    if (chartConfig && chartRenderer) {
+      chartImage = await chartRenderer.renderToDataURI(chartConfig);
+    }
+
     // Build chart spec summary for the response
     const chartSpecSummary: ChatSpecSummary | null = queryResult.chartSpec
       ? { type: queryResult.chartSpec.type, title: queryResult.chartSpec.title }
@@ -81,6 +90,7 @@ export function createChatService(deps: ChatServiceDeps) {
       durationMs: executionResult.durationMs,
       chartSpec: chartSpecSummary,
       chartConfig,
+      chartImage,
     };
 
     logger.info(
@@ -89,6 +99,7 @@ export function createChatService(deps: ChatServiceDeps) {
         rowCount: response.rowCount,
         durationMs: response.durationMs,
         hasChart: chartConfig !== null,
+        hasChartImage: chartImage !== null,
       },
       'Chat service: question answered',
     );

@@ -94,6 +94,11 @@ interface MockExecutor {
   execute: jest.Mock<(queryResult: AIQueryResult) => Promise<QueryExecutionResult>>;
 }
 
+interface MockChartRenderer {
+  renderToBuffer: jest.Mock<(config: ChartSpecResult) => Promise<Buffer | null>>;
+  renderToDataURI: jest.Mock<(config: ChartSpecResult) => Promise<string | null>>;
+}
+
 function createMocks() {
   const mockPipeline: MockPipeline = {
     processQuestion: jest.fn<(storeId: string, question: string) => Promise<AIQueryResult>>(),
@@ -101,7 +106,11 @@ function createMocks() {
   const mockExecutor: MockExecutor = {
     execute: jest.fn<(queryResult: AIQueryResult) => Promise<QueryExecutionResult>>(),
   };
-  return { mockPipeline, mockExecutor };
+  const mockChartRenderer: MockChartRenderer = {
+    renderToBuffer: jest.fn<(config: ChartSpecResult) => Promise<Buffer | null>>(),
+    renderToDataURI: jest.fn<(config: ChartSpecResult) => Promise<string | null>>(),
+  };
+  return { mockPipeline, mockExecutor, mockChartRenderer };
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
@@ -109,12 +118,14 @@ function createMocks() {
 describe('chatService', () => {
   let mockPipeline: MockPipeline;
   let mockExecutor: MockExecutor;
+  let mockChartRenderer: MockChartRenderer;
 
   beforeEach(() => {
     jest.clearAllMocks();
     const mocks = createMocks();
     mockPipeline = mocks.mockPipeline;
     mockExecutor = mocks.mockExecutor;
+    mockChartRenderer = mocks.mockChartRenderer;
   });
 
   // ── ask() — happy path ──────────────────────────────────────────
@@ -471,6 +482,7 @@ describe('chatService', () => {
       expect(result).toHaveProperty('durationMs');
       expect(result).toHaveProperty('chartSpec');
       expect(result).toHaveProperty('chartConfig');
+      expect(result).toHaveProperty('chartImage');
     });
 
     it('returns rows from query executor', async () => {
@@ -666,6 +678,154 @@ describe('chatService', () => {
       const result = await chatService.ask(STORE_ID, 'Top customers');
 
       expect(result.chartSpec).toEqual({ type: 'table', title: 'Top Customers' });
+    });
+  });
+
+  // ── ask() — chartImage (server-side rendering) ─────────────────
+
+  describe('ask() — chartImage', () => {
+    it('returns chartImage when chartRenderer is provided and chart config exists', async () => {
+      const chartSpec = makeChartSpec();
+      const chartConfig = makeChartConfig();
+      const dataURI = 'data:image/png;base64,fakeBase64Data';
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult({
+        rows: [{ name: 'Product 1', revenue: 100 }, { name: 'Product 2', revenue: 200 }],
+        rowCount: 2,
+      }));
+      mockToChartConfig.mockReturnValue(chartConfig);
+      mockChartRenderer.renderToDataURI.mockResolvedValue(dataURI);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+        chartRenderer: mockChartRenderer,
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Show revenue by product');
+
+      expect(result.chartImage).toBe(dataURI);
+    });
+
+    it('calls chartRenderer.renderToDataURI with the chart config', async () => {
+      const chartSpec = makeChartSpec();
+      const chartConfig = makeChartConfig();
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult({
+        rows: [{ name: 'Product 1', revenue: 100 }],
+        rowCount: 1,
+      }));
+      mockToChartConfig.mockReturnValue(chartConfig);
+      mockChartRenderer.renderToDataURI.mockResolvedValue('data:image/png;base64,abc');
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+        chartRenderer: mockChartRenderer,
+      });
+
+      await chatService.ask(STORE_ID, 'Revenue');
+
+      expect(mockChartRenderer.renderToDataURI).toHaveBeenCalledTimes(1);
+      expect(mockChartRenderer.renderToDataURI).toHaveBeenCalledWith(chartConfig);
+    });
+
+    it('returns null chartImage when no chartRenderer is provided', async () => {
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec: makeChartSpec() }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult({
+        rows: [{ name: 'Product 1', revenue: 100 }],
+        rowCount: 1,
+      }));
+      mockToChartConfig.mockReturnValue(makeChartConfig());
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Revenue');
+
+      expect(result.chartImage).toBeNull();
+    });
+
+    it('returns null chartImage when chartConfig is null', async () => {
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec: null }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+        chartRenderer: mockChartRenderer,
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Total revenue?');
+
+      expect(result.chartImage).toBeNull();
+      expect(mockChartRenderer.renderToDataURI).not.toHaveBeenCalled();
+    });
+
+    it('returns null chartImage when renderer returns null (e.g., table type)', async () => {
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec: makeChartSpec({ type: 'table' }) }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult({
+        rows: [{ name: 'Alice', total_spent: 500 }],
+        rowCount: 1,
+      }));
+      const tableResult = { type: 'table' as const, title: 'Top Customers', headers: ['name', 'total_spent'], rows: [['Alice', 500]] };
+      mockToChartConfig.mockReturnValue(tableResult);
+      mockChartRenderer.renderToDataURI.mockResolvedValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+        chartRenderer: mockChartRenderer,
+      });
+
+      const result = await chatService.ask(STORE_ID, 'Top customers');
+
+      expect(result.chartImage).toBeNull();
+    });
+
+    it('logs hasChartImage: true when chart image is generated', async () => {
+      const chartSpec = makeChartSpec();
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult({ chartSpec }));
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult({
+        rows: [{ name: 'P1', revenue: 100 }],
+        rowCount: 1,
+      }));
+      mockToChartConfig.mockReturnValue(makeChartConfig());
+      mockChartRenderer.renderToDataURI.mockResolvedValue('data:image/png;base64,xyz');
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+        chartRenderer: mockChartRenderer,
+      });
+
+      await chatService.ask(STORE_ID, 'Revenue');
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ hasChartImage: true }),
+        'Chat service: question answered',
+      );
+    });
+
+    it('logs hasChartImage: false when no renderer provided', async () => {
+      mockPipeline.processQuestion.mockResolvedValue(makeAIQueryResult());
+      mockExecutor.execute.mockResolvedValue(makeExecutionResult());
+      mockToChartConfig.mockReturnValue(null);
+
+      const chatService = createChatService({
+        aiPipeline: mockPipeline as unknown as Parameters<typeof createChatService>[0]['aiPipeline'],
+        queryExecutor: mockExecutor as unknown as Parameters<typeof createChatService>[0]['queryExecutor'],
+      });
+
+      await chatService.ask(STORE_ID, 'Revenue?');
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ hasChartImage: false }),
+        'Chat service: question answered',
+      );
     });
   });
 

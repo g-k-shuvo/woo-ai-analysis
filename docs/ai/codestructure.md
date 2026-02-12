@@ -68,8 +68,8 @@ woo-ai-analytics/
 │   │   │   ├── storeService.ts       # Store CRUD, connect/disconnect, API key verify
 │   │   │   ├── syncService.ts        # Orders/Products/Customers/Categories batch upsert (ON CONFLICT merge, sync logs)
 │   │   │   ├── syncRetryService.ts   # Retry logic, exponential backoff, stale sync detection
-│   │   │   ├── chatService.ts        # Orchestrates AI pipeline → executor → chart spec [implemented]
-│   │   │   └── chartService.ts       # Chart rendering (planned)
+│   │   │   ├── chatService.ts        # Orchestrates AI pipeline → executor → chart spec → chart image [implemented]
+│   │   │   └── chartRenderer.ts      # Server-side Chart.js → PNG rendering via chartjs-node-canvas [implemented]
 │   │   ├── utils/
 │   │   │   ├── errors.ts             # Custom error classes
 │   │   │   └── logger.ts             # Structured logging
@@ -87,9 +87,7 @@ woo-ai-analytics/
 │   │       ├── customerQueries.ts  # Customer query service (new vs returning, top spenders, CLV) [implemented]
 │   │       ├── orderQueries.ts     # Order query service (count, AOV, status breakdown, recent) [implemented]
 │   │       └── chartSpec.ts          # AI → Chart.js config converter (ChartSpec + rows → ChartConfiguration) [implemented]
-│   ├── charts/
-│   │   ├── renderer.ts               # Chart.js server-side rendering
-│   │   └── specs/                    # Default chart configurations
+│   ├── charts/                        # (unused — chart rendering lives in src/services/chartRenderer.ts)
 │   ├── db/
 │   │   ├── readonlyConnection.ts     # Read-only Knex pool for AI queries (SELECT-only, 5s timeout) [implemented]
 │   │   ├── knexfile.ts               # Knex configuration
@@ -113,6 +111,9 @@ woo-ai-analytics/
 │   │   │   │   └── chartSpec.test.ts    # Chart spec converter unit tests [implemented]
 │   │   │   ├── db/
 │   │   │   │   └── readonlyConnection.test.ts # Read-only connection factory tests [implemented]
+│   │   │   ├── services/
+│   │   │   │   ├── chatService.test.ts   # Chat service unit tests (incl. chartImage) [implemented]
+│   │   │   │   └── chartRenderer.test.ts # Chart renderer unit tests [implemented]
 │   │   │   └── ...                        # Other unit tests
 │   │   ├── integration/
 │   │   │   ├── aiPipeline.test.ts          # AI pipeline integration tests [implemented]
@@ -123,6 +124,7 @@ woo-ai-analytics/
 │   │   │   ├── customerQueries.test.ts  # Customer query integration tests [implemented]
 │   │   │   ├── orderQueries.test.ts     # Order query integration tests [implemented]
 │   │   │   ├── chartSpec.test.ts       # Chart spec converter integration tests [implemented]
+│   │   │   ├── chartRenderer.test.ts  # Server-side chart renderer integration tests [implemented]
 │   │   │   └── ...                         # Other integration tests
 │   │   └── e2e/                      # Playwright tests
 │   ├── docker-compose.yml            # PostgreSQL + Redis for local dev
