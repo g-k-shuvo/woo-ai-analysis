@@ -210,6 +210,24 @@ CREATE TABLE revenue_forecasts (
 CREATE INDEX idx_revenue_forecasts_store ON revenue_forecasts(store_id);
 ```
 
+### date_range_comparisons
+Date range comparison results (this month vs last month, etc.). Max 20 per store.
+```sql
+CREATE TABLE date_range_comparisons (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  store_id        UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  preset          VARCHAR(30),                         -- today|this_week|this_month|this_year|last_7_days|last_30_days|null for custom
+  current_start   TIMESTAMPTZ NOT NULL,
+  current_end     TIMESTAMPTZ NOT NULL,
+  previous_start  TIMESTAMPTZ NOT NULL,
+  previous_end    TIMESTAMPTZ NOT NULL,
+  metrics         JSONB NOT NULL DEFAULT '{}',         -- { current, previous, revenueChange, trend, ... }
+  breakdown       JSONB NOT NULL DEFAULT '[]',         -- [{ date, currentRevenue, previousRevenue }]
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX idx_date_range_comparisons_store ON date_range_comparisons(store_id);
+```
+
 ### sync_logs
 Track sync health and history.
 ```sql

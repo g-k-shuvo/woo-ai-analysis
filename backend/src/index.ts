@@ -38,6 +38,8 @@ import { createScheduledInsightsService } from './services/scheduledInsightsServ
 import { scheduledInsightsRoutes } from './routes/scheduledInsights/index.js';
 import { createRevenueForecastService } from './services/revenueForecastService.js';
 import { forecastRoutes } from './routes/forecasts/index.js';
+import { createDateComparisonService } from './services/dateComparisonService.js';
+import { comparisonRoutes } from './routes/comparisons/index.js';
 import OpenAI from 'openai';
 
 const startTime = Date.now();
@@ -113,6 +115,9 @@ const scheduledInsightsService = createScheduledInsightsService({ db });
 
 // Revenue forecast service
 const revenueForecastService = createRevenueForecastService({ db, readonlyDb });
+
+// Date comparison service
+const dateComparisonService = createDateComparisonService({ db, readonlyDb });
 
 // Rate limiter
 const rateLimiter = createRateLimiter({
@@ -190,6 +195,10 @@ await fastify.register(
 
 await fastify.register(
   async (instance) => forecastRoutes(instance, { revenueForecastService }),
+);
+
+await fastify.register(
+  async (instance) => comparisonRoutes(instance, { dateComparisonService }),
 );
 
 // Graceful shutdown

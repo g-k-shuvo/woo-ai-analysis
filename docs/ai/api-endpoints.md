@@ -86,6 +86,14 @@ All endpoints except `/`, `/health`, `/api/info`, and `/api/stores/connect` requ
 | GET | `/api/forecasts/:id` | Get a specific forecast with data points [implemented] |
 | DELETE | `/api/forecasts/:id` | Delete a forecast [implemented] |
 
+### Date Range Comparisons
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/comparisons` | Generate a date range comparison. Body: `{ preset }` or `{ currentStart, currentEnd, previousStart, previousEnd }` [implemented] |
+| GET | `/api/comparisons` | List all comparisons for the store [implemented] |
+| GET | `/api/comparisons/:id` | Get a specific comparison with metrics and breakdown [implemented] |
+| DELETE | `/api/comparisons/:id` | Delete a comparison [implemented] |
+
 ## Plugin-Side Endpoints (WordPress AJAX)
 
 These run inside WordPress via `admin-ajax.php`:
@@ -118,6 +126,10 @@ These run inside WordPress via `admin-ajax.php`:
 | `waa_list_forecasts` | Proxies to GET /api/forecasts — lists revenue forecasts (nonce required) [implemented] |
 | `waa_get_forecast` | Proxies to GET /api/forecasts/:id — gets a specific forecast (nonce required) [implemented] |
 | `waa_delete_forecast` | Proxies to DELETE /api/forecasts/:id — deletes a forecast (nonce required) [implemented] |
+| `waa_generate_comparison` | Proxies to POST /api/comparisons — generates date range comparison (nonce required) [implemented] |
+| `waa_list_comparisons` | Proxies to GET /api/comparisons — lists date range comparisons (nonce required) [implemented] |
+| `waa_get_comparison` | Proxies to GET /api/comparisons/:id — gets a specific comparison (nonce required) [implemented] |
+| `waa_delete_comparison` | Proxies to DELETE /api/comparisons/:id — deletes a comparison (nonce required) [implemented] |
 
 ## Response Format (Standard)
 

@@ -4,6 +4,7 @@ import ChatWindow from './components/ChatWindow';
 import OnboardingWizard from './components/OnboardingWizard';
 import Dashboard from './components/Dashboard';
 import ScheduledInsights from './components/ScheduledInsights';
+import DateRangeComparison from './components/DateRangeComparison';
 
 const { page, onboardingComplete } = window.waaData || {};
 
@@ -19,6 +20,10 @@ export default function App() {
 
 	if ( currentPage === 'woo-ai-analytics-scheduled-insights' ) {
 		return <ScheduledInsights />;
+	}
+
+	if ( currentPage === 'woo-ai-analytics-comparisons' ) {
+		return <DateRangeComparison />;
 	}
 
 	if ( currentPage === 'woo-ai-analytics-dashboard' ) {

@@ -59,6 +59,10 @@ final class Ajax_Handler {
 		add_action( 'wp_ajax_waa_list_forecasts', array( $this, 'handle_list_forecasts' ) );
 		add_action( 'wp_ajax_waa_get_forecast', array( $this, 'handle_get_forecast' ) );
 		add_action( 'wp_ajax_waa_delete_forecast', array( $this, 'handle_delete_forecast' ) );
+		add_action( 'wp_ajax_waa_generate_comparison', array( $this, 'handle_generate_comparison' ) );
+		add_action( 'wp_ajax_waa_list_comparisons', array( $this, 'handle_list_comparisons' ) );
+		add_action( 'wp_ajax_waa_get_comparison', array( $this, 'handle_get_comparison' ) );
+		add_action( 'wp_ajax_waa_delete_comparison', array( $this, 'handle_delete_comparison' ) );
 	}
 
 	/**
@@ -1668,6 +1672,381 @@ final class Ajax_Handler {
 			}
 		}
 		return $result;
+	}
+
+	// ─── Date Range Comparison AJAX Handlers ─────────────────────────────────────
+
+	/**
+	 * Generate comparison AJAX handler.
+	 *
+	 * Proxies to POST /api/comparisons.
+	 */
+	public function handle_generate_comparison(): void {
+		$conn = $this->verify_comparison_request();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$payload = array();
+
+		if ( ! empty( $_POST['preset'] ) ) {
+			$preset = sanitize_text_field( wp_unslash( $_POST['preset'] ) );
+			$valid  = array( 'today', 'this_week', 'this_month', 'this_year', 'last_7_days', 'last_30_days' );
+			if ( ! in_array( $preset, $valid, true ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid comparison preset.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+			$payload['preset'] = $preset;
+		} else {
+			$current_start  = isset( $_POST['currentStart'] ) ? sanitize_text_field( wp_unslash( $_POST['currentStart'] ) ) : '';
+			$current_end    = isset( $_POST['currentEnd'] ) ? sanitize_text_field( wp_unslash( $_POST['currentEnd'] ) ) : '';
+			$previous_start = isset( $_POST['previousStart'] ) ? sanitize_text_field( wp_unslash( $_POST['previousStart'] ) ) : '';
+			$previous_end   = isset( $_POST['previousEnd'] ) ? sanitize_text_field( wp_unslash( $_POST['previousEnd'] ) ) : '';
+
+			if ( empty( $current_start ) || empty( $current_end ) || empty( $previous_start ) || empty( $previous_end ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'All date range fields are required.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+
+			$date_pattern = '/^\d{4}-\d{2}-\d{2}/';
+			if ( ! preg_match( $date_pattern, $current_start ) || ! preg_match( $date_pattern, $current_end )
+				|| ! preg_match( $date_pattern, $previous_start ) || ! preg_match( $date_pattern, $previous_end ) ) {
+				wp_send_json_error(
+					array( 'message' => __( 'Invalid date format. Use YYYY-MM-DD.', 'woo-ai-analytics' ) )
+				);
+				return;
+			}
+
+			$payload['currentStart']  = $current_start;
+			$payload['currentEnd']    = $current_end;
+			$payload['previousStart'] = $previous_start;
+			$payload['previousEnd']   = $previous_end;
+		}
+
+		$response = wp_remote_post(
+			trailingslashit( $api_url ) . 'api/comparisons',
+			array(
+				'timeout' => 30,
+				'headers' => array(
+					'Content-Type'  => 'application/json',
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+				'body'    => wp_json_encode( $payload ),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Generate Comparison Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( ( 200 !== $status_code && 201 !== $status_code ) || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to generate comparison.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_comparison_response( $body['data'] ) );
+	}
+
+	/**
+	 * List comparisons AJAX handler.
+	 *
+	 * Proxies to GET /api/comparisons.
+	 */
+	public function handle_list_comparisons(): void {
+		$conn = $this->verify_comparison_request();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/comparisons',
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA List Comparisons Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load comparisons.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		$comparisons = array();
+		if ( is_array( $body['data']['comparisons'] ?? null ) ) {
+			foreach ( $body['data']['comparisons'] as $comparison ) {
+				$comparisons[] = self::sanitize_comparison_response( $comparison );
+			}
+		}
+		wp_send_json_success( array( 'comparisons' => $comparisons ) );
+	}
+
+	/**
+	 * Get comparison AJAX handler.
+	 *
+	 * Proxies to GET /api/comparisons/:id.
+	 */
+	public function handle_get_comparison(): void {
+		$conn          = $this->verify_comparison_request();
+		$comparison_id = $this->get_validated_comparison_id();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_get(
+			trailingslashit( $api_url ) . 'api/comparisons/' . rawurlencode( $comparison_id ),
+			array(
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Get Comparison Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to load comparison.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( self::sanitize_comparison_response( $body['data'] ) );
+	}
+
+	/**
+	 * Delete comparison AJAX handler.
+	 *
+	 * Proxies to DELETE /api/comparisons/:id.
+	 */
+	public function handle_delete_comparison(): void {
+		$conn          = $this->verify_comparison_request();
+		$comparison_id = $this->get_validated_comparison_id();
+
+		$api_url    = $conn['api_url'];
+		$auth_token = $conn['auth_token'];
+
+		$response = wp_remote_request(
+			trailingslashit( $api_url ) . 'api/comparisons/' . rawurlencode( $comparison_id ),
+			array(
+				'method'  => 'DELETE',
+				'timeout' => 10,
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $auth_token,
+				),
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+			error_log( 'WAA Delete Comparison Error: ' . $response->get_error_message() );
+			wp_send_json_error(
+				array( 'message' => __( 'Unable to connect to analytics service.', 'woo-ai-analytics' ) )
+			);
+			return;
+		}
+
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( 200 !== $status_code || ! is_array( $body ) || empty( $body['success'] ) ) {
+			$error_msg = __( 'Failed to delete comparison.', 'woo-ai-analytics' );
+			if ( is_array( $body ) && ! empty( $body['error']['message'] ) ) {
+				$error_msg = sanitize_text_field( $body['error']['message'] );
+			}
+			wp_send_json_error( array( 'message' => $error_msg ) );
+			return;
+		}
+
+		wp_send_json_success( array( 'deleted' => true ) );
+	}
+
+	/**
+	 * Verify nonce, permissions, and store connection for comparison AJAX handlers.
+	 *
+	 * @return array{api_url: string, auth_token: string} Connection details on success.
+	 */
+	private function verify_comparison_request(): array {
+		check_ajax_referer( 'waa_nonce', 'nonce' );
+
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Permission denied.', 'woo-ai-analytics' ) ),
+				403
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		$api_url    = get_option( 'waa_api_url', '' );
+		$auth_token = Settings::get_auth_token();
+
+		if ( empty( $api_url ) || empty( $auth_token ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Store is not connected.', 'woo-ai-analytics' ) )
+			);
+			return array( 'api_url' => '', 'auth_token' => '' ); // Unreachable; for static analysis.
+		}
+
+		return array(
+			'api_url'    => $api_url,
+			'auth_token' => $auth_token,
+		);
+	}
+
+	/**
+	 * Validate and extract a comparison ID from the request.
+	 *
+	 * @return string The validated comparison ID.
+	 */
+	private function get_validated_comparison_id(): string {
+		$comparison_id = isset( $_POST['comparisonId'] )
+			? sanitize_text_field( wp_unslash( $_POST['comparisonId'] ) )
+			: '';
+
+		if ( empty( $comparison_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Comparison ID is required.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		if ( ! preg_match( '/^[0-9a-fA-F-]{1,64}$/', $comparison_id ) ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Invalid comparison ID format.', 'woo-ai-analytics' ) )
+			);
+			return ''; // Unreachable; for static analysis.
+		}
+
+		return $comparison_id;
+	}
+
+	/**
+	 * Sanitize a date range comparison response from the backend.
+	 *
+	 * @param mixed $data Raw comparison data.
+	 * @return array Sanitized comparison data.
+	 */
+	private static function sanitize_comparison_response( $data ): array {
+		if ( ! is_array( $data ) ) {
+			return array();
+		}
+
+		$safe = array(
+			'id'            => isset( $data['id'] ) ? sanitize_text_field( $data['id'] ) : '',
+			'preset'        => isset( $data['preset'] ) ? sanitize_text_field( (string) $data['preset'] ) : null,
+			'currentStart'  => isset( $data['currentStart'] ) ? sanitize_text_field( $data['currentStart'] ) : '',
+			'currentEnd'    => isset( $data['currentEnd'] ) ? sanitize_text_field( $data['currentEnd'] ) : '',
+			'previousStart' => isset( $data['previousStart'] ) ? sanitize_text_field( $data['previousStart'] ) : '',
+			'previousEnd'   => isset( $data['previousEnd'] ) ? sanitize_text_field( $data['previousEnd'] ) : '',
+			'createdAt'     => isset( $data['createdAt'] ) ? sanitize_text_field( $data['createdAt'] ) : '',
+		);
+
+		// Sanitize metrics.
+		$safe['metrics'] = array(
+			'current'                 => array( 'revenue' => 0.0, 'orderCount' => 0, 'avgOrderValue' => 0.0 ),
+			'previous'                => array( 'revenue' => 0.0, 'orderCount' => 0, 'avgOrderValue' => 0.0 ),
+			'revenueChange'           => 0.0,
+			'revenueChangePercent'    => 0.0,
+			'orderCountChange'        => 0,
+			'orderCountChangePercent' => 0.0,
+			'aovChange'               => 0.0,
+			'aovChangePercent'        => 0.0,
+			'trend'                   => 'flat',
+		);
+		if ( isset( $data['metrics'] ) && is_array( $data['metrics'] ) ) {
+			$m = $data['metrics'];
+
+			// Current period metrics.
+			if ( isset( $m['current'] ) && is_array( $m['current'] ) ) {
+				$safe['metrics']['current'] = array(
+					'revenue'       => isset( $m['current']['revenue'] ) ? (float) $m['current']['revenue'] : 0.0,
+					'orderCount'    => isset( $m['current']['orderCount'] ) ? (int) $m['current']['orderCount'] : 0,
+					'avgOrderValue' => isset( $m['current']['avgOrderValue'] ) ? (float) $m['current']['avgOrderValue'] : 0.0,
+				);
+			}
+
+			// Previous period metrics.
+			if ( isset( $m['previous'] ) && is_array( $m['previous'] ) ) {
+				$safe['metrics']['previous'] = array(
+					'revenue'       => isset( $m['previous']['revenue'] ) ? (float) $m['previous']['revenue'] : 0.0,
+					'orderCount'    => isset( $m['previous']['orderCount'] ) ? (int) $m['previous']['orderCount'] : 0,
+					'avgOrderValue' => isset( $m['previous']['avgOrderValue'] ) ? (float) $m['previous']['avgOrderValue'] : 0.0,
+				);
+			}
+
+			$safe['metrics']['revenueChange']           = isset( $m['revenueChange'] ) ? (float) $m['revenueChange'] : 0.0;
+			$safe['metrics']['revenueChangePercent']     = isset( $m['revenueChangePercent'] ) ? (float) $m['revenueChangePercent'] : 0.0;
+			$safe['metrics']['orderCountChange']         = isset( $m['orderCountChange'] ) ? (int) $m['orderCountChange'] : 0;
+			$safe['metrics']['orderCountChangePercent']  = isset( $m['orderCountChangePercent'] ) ? (float) $m['orderCountChangePercent'] : 0.0;
+			$safe['metrics']['aovChange']                = isset( $m['aovChange'] ) ? (float) $m['aovChange'] : 0.0;
+			$safe['metrics']['aovChangePercent']         = isset( $m['aovChangePercent'] ) ? (float) $m['aovChangePercent'] : 0.0;
+
+			$trend = isset( $m['trend'] ) ? sanitize_text_field( $m['trend'] ) : 'flat';
+			$safe['metrics']['trend'] = in_array( $trend, array( 'up', 'down', 'flat' ), true ) ? $trend : 'flat';
+		}
+
+		// Sanitize breakdown array.
+		$safe['breakdown'] = array();
+		if ( isset( $data['breakdown'] ) && is_array( $data['breakdown'] ) ) {
+			foreach ( $data['breakdown'] as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+				$safe['breakdown'][] = array(
+					'date'            => isset( $row['date'] ) ? sanitize_text_field( $row['date'] ) : '',
+					'currentRevenue'  => isset( $row['currentRevenue'] ) ? (float) $row['currentRevenue'] : 0.0,
+					'previousRevenue' => isset( $row['previousRevenue'] ) ? (float) $row['previousRevenue'] : 0.0,
+				);
+			}
+		}
+
+		return $safe;
 	}
 
 	/**
