@@ -1,0 +1,89 @@
+.waa-comparison__mode-selector {
+	margin-bottom: 16px;
+}
+
+.waa-comparison__mode-label {
+	margin-right: 8px;
+}
+
+.waa-comparison__preset-row {
+	margin-bottom: 16px;
+}
+
+.waa-comparison__preset-select {
+	margin-right: 8px;
+}
+
+.waa-comparison__custom-dates {
+	margin-bottom: 16px;
+}
+
+.waa-comparison__period-group {
+	margin-bottom: 8px;
+}
+
+.waa-comparison__date-input--start {
+	margin-right: 4px;
+}
+
+.waa-comparison__date-input--end {
+	margin-left: 4px;
+}
+
+.waa-comparison__generate-btn {
+	margin-bottom: 16px;
+}
+
+.waa-comparison__limit-note {
+	margin-left: 8px;
+}
+
+.waa-comparison__results-card {
+	padding: 16px;
+	margin-bottom: 16px;
+}
+
+.waa-comparison__results-preset {
+	font-weight: normal;
+	margin-left: 8px;
+}
+
+.waa-comparison__metrics-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 16px;
+	margin-bottom: 16px;
+}
+
+.waa-comparison__metric-card {
+	padding: 12px;
+}
+
+.waa-comparison__metric-previous {
+	font-size: 12px;
+	color: #666;
+}
+
+.waa-comparison__change--positive {
+	color: #00a32a;
+}
+
+.waa-comparison__change--negative {
+	color: #d63638;
+}
+
+.waa-comparison__change--neutral {
+	color: #666;
+}
+
+.waa-comparison__trend-row {
+	margin-bottom: 8px;
+}
+
+.waa-comparison__breakdown-toggle {
+	cursor: pointer;
+}
+
+.waa-comparison__action-btn {
+	margin-right: 4px;
+}

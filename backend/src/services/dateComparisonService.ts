@@ -352,11 +352,11 @@ export function createDateComparisonService(deps: DateComparisonServiceDeps) {
     if (isCustom) {
       const customInput = input as GenerateComparisonCustomInput;
       currentQuery
-        .where('date_created', '>=', customInput.currentStart)
-        .where('date_created', '<', customInput.currentEnd);
+        .whereRaw('date_created::date >= ?', [customInput.currentStart])
+        .whereRaw('date_created::date <= ?', [customInput.currentEnd]);
       previousQuery
-        .where('date_created', '>=', customInput.previousStart)
-        .where('date_created', '<', customInput.previousEnd);
+        .whereRaw('date_created::date >= ?', [customInput.previousStart])
+        .whereRaw('date_created::date <= ?', [customInput.previousEnd]);
     } else {
       currentQuery
         .whereRaw(`date_created >= ${currentStartExpr}`)
@@ -392,11 +392,11 @@ export function createDateComparisonService(deps: DateComparisonServiceDeps) {
     if (isCustom) {
       const customInput = input as GenerateComparisonCustomInput;
       currentBreakdownQuery
-        .where('date_created', '>=', customInput.currentStart)
-        .where('date_created', '<', customInput.currentEnd);
+        .whereRaw('date_created::date >= ?', [customInput.currentStart])
+        .whereRaw('date_created::date <= ?', [customInput.currentEnd]);
       previousBreakdownQuery
-        .where('date_created', '>=', customInput.previousStart)
-        .where('date_created', '<', customInput.previousEnd);
+        .whereRaw('date_created::date >= ?', [customInput.previousStart])
+        .whereRaw('date_created::date <= ?', [customInput.previousEnd]);
     } else {
       currentBreakdownQuery
         .whereRaw(`date_created >= ${currentStartExpr}`)

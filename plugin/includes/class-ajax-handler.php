@@ -1956,7 +1956,7 @@ final class Ajax_Handler {
 			return ''; // Unreachable; for static analysis.
 		}
 
-		if ( ! preg_match( '/^[0-9a-fA-F-]{1,64}$/', $comparison_id ) ) {
+		if ( ! preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $comparison_id ) ) {
 			wp_send_json_error(
 				array( 'message' => __( 'Invalid comparison ID format.', 'woo-ai-analytics' ) )
 			);

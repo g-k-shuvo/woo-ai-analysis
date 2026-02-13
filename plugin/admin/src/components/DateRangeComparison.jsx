@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+import './DateRangeComparison.css';
 
 const { ajaxUrl, nonce } = window.waaData || {};
 
@@ -17,6 +18,16 @@ const TREND_LABELS = {
 	down: __( 'Down', 'woo-ai-analytics' ),
 	flat: __( 'Flat', 'woo-ai-analytics' ),
 };
+
+function getChangeClass( value ) {
+	if ( value > 0 ) {
+		return 'waa-comparison__change--positive';
+	}
+	if ( value < 0 ) {
+		return 'waa-comparison__change--negative';
+	}
+	return 'waa-comparison__change--neutral';
+}
 
 export default function DateRangeComparison() {
 	const [ comparisons, setComparisons ] = useState( [] );
@@ -208,8 +219,8 @@ export default function DateRangeComparison() {
 		}
 	}, [] );
 
-	const formatCurrency = ( value ) => {
-		return '$' + Number( value ).toLocaleString( undefined, {
+	const formatCurrency = ( value, currencySymbol = '$' ) => {
+		return currencySymbol + Number( value ).toLocaleString( undefined, {
 			minimumFractionDigits: 2,
 			maximumFractionDigits: 2,
 		} );
@@ -243,8 +254,8 @@ export default function DateRangeComparison() {
 				</div>
 			) }
 
-			<div style={ { marginBottom: '16px' } }>
-				<label style={ { marginRight: '8px' } }>
+			<div className="waa-comparison__mode-selector">
+				<label className="waa-comparison__mode-label">
 					<input
 						type="radio"
 						name="comparisonMode"
@@ -267,13 +278,13 @@ export default function DateRangeComparison() {
 			</div>
 
 			{ mode === 'preset' ? (
-				<div style={ { marginBottom: '16px' } }>
+				<div className="waa-comparison__preset-row">
 					<select
 						value={ selectedPreset }
 						onChange={ ( e ) =>
 							setSelectedPreset( e.target.value )
 						}
-						style={ { marginRight: '8px' } }
+						className="waa-comparison__preset-select"
 					>
 						{ PRESET_OPTIONS.map( ( opt ) => (
 							<option key={ opt.value } value={ opt.value }>
@@ -283,8 +294,8 @@ export default function DateRangeComparison() {
 					</select>
 				</div>
 			) : (
-				<div style={ { marginBottom: '16px' } }>
-					<div style={ { marginBottom: '8px' } }>
+				<div className="waa-comparison__custom-dates">
+					<div className="waa-comparison__period-group">
 						<strong>
 							{ __( 'Current Period:', 'woo-ai-analytics' ) }
 						</strong>
@@ -295,7 +306,7 @@ export default function DateRangeComparison() {
 							onChange={ ( e ) =>
 								setCurrentStart( e.target.value )
 							}
-							style={ { marginRight: '4px' } }
+							className="waa-comparison__date-input--start"
 						/>
 						{ __( 'to', 'woo-ai-analytics' ) }
 						<input
@@ -304,7 +315,7 @@ export default function DateRangeComparison() {
 							onChange={ ( e ) =>
 								setCurrentEnd( e.target.value )
 							}
-							style={ { marginLeft: '4px' } }
+							className="waa-comparison__date-input--end"
 						/>
 					</div>
 					<div>
@@ -318,7 +329,7 @@ export default function DateRangeComparison() {
 							onChange={ ( e ) =>
 								setPreviousStart( e.target.value )
 							}
-							style={ { marginRight: '4px' } }
+							className="waa-comparison__date-input--start"
 						/>
 						{ __( 'to', 'woo-ai-analytics' ) }
 						<input
@@ -327,7 +338,7 @@ export default function DateRangeComparison() {
 							onChange={ ( e ) =>
 								setPreviousEnd( e.target.value )
 							}
-							style={ { marginLeft: '4px' } }
+							className="waa-comparison__date-input--end"
 						/>
 					</div>
 				</div>
@@ -335,20 +346,16 @@ export default function DateRangeComparison() {
 
 			<button
 				type="button"
-				className="button button-primary"
+				className="button button-primary waa-comparison__generate-btn"
 				onClick={ handleGenerate }
 				disabled={ generating || comparisons.length >= 20 }
-				style={ { marginBottom: '16px' } }
 			>
 				{ generating
 					? __( 'Generating…', 'woo-ai-analytics' )
 					: __( 'Compare', 'woo-ai-analytics' ) }
 			</button>
 			{ comparisons.length >= 20 && (
-				<span
-					className="description"
-					style={ { marginLeft: '8px' } }
-				>
+				<span className="description waa-comparison__limit-note">
 					{ __(
 						'Maximum of 20 comparisons reached. Delete one to create a new one.',
 						'woo-ai-analytics'
@@ -357,27 +364,17 @@ export default function DateRangeComparison() {
 			) }
 
 			{ activeComparison && (
-				<div
-					className="card"
-					style={ { padding: '16px', marginBottom: '16px' } }
-				>
+				<div className="card waa-comparison__results-card">
 					<h3>
 						{ __( 'Comparison Results', 'woo-ai-analytics' ) }
 						{ activeComparison.preset && (
-							<span style={ { fontWeight: 'normal', marginLeft: '8px' } }>
+							<span className="waa-comparison__results-preset">
 								({ formatPreset( activeComparison.preset ) })
 							</span>
 						) }
 					</h3>
-					<div
-						style={ {
-							display: 'grid',
-							gridTemplateColumns: 'repeat(3, 1fr)',
-							gap: '16px',
-							marginBottom: '16px',
-						} }
-					>
-						<div className="card" style={ { padding: '12px' } }>
+					<div className="waa-comparison__metrics-grid">
+						<div className="card waa-comparison__metric-card">
 							<strong>
 								{ __( 'Revenue', 'woo-ai-analytics' ) }
 							</strong>
@@ -387,7 +384,7 @@ export default function DateRangeComparison() {
 										?.revenue
 								) }
 							</div>
-							<div style={ { fontSize: '12px', color: '#666' } }>
+							<div className="waa-comparison__metric-previous">
 								{ __(
 									'Previous:',
 									'woo-ai-analytics'
@@ -397,25 +394,14 @@ export default function DateRangeComparison() {
 										?.revenue
 								) }
 							</div>
-							<div
-								style={ {
-									color:
-										activeComparison.metrics
-											?.revenueChange > 0
-											? '#00a32a'
-											: activeComparison.metrics
-													?.revenueChange < 0
-											? '#d63638'
-											: '#666',
-								} }
-							>
+							<div className={ getChangeClass( activeComparison.metrics?.revenueChange ) }>
 								{ formatPercent(
 									activeComparison.metrics
 										?.revenueChangePercent
 								) }
 							</div>
 						</div>
-						<div className="card" style={ { padding: '12px' } }>
+						<div className="card waa-comparison__metric-card">
 							<strong>
 								{ __( 'Orders', 'woo-ai-analytics' ) }
 							</strong>
@@ -423,7 +409,7 @@ export default function DateRangeComparison() {
 								{ activeComparison.metrics?.current
 									?.orderCount ?? 0 }
 							</div>
-							<div style={ { fontSize: '12px', color: '#666' } }>
+							<div className="waa-comparison__metric-previous">
 								{ __(
 									'Previous:',
 									'woo-ai-analytics'
@@ -431,25 +417,14 @@ export default function DateRangeComparison() {
 								{ activeComparison.metrics?.previous
 									?.orderCount ?? 0 }
 							</div>
-							<div
-								style={ {
-									color:
-										activeComparison.metrics
-											?.orderCountChange > 0
-											? '#00a32a'
-											: activeComparison.metrics
-													?.orderCountChange < 0
-											? '#d63638'
-											: '#666',
-								} }
-							>
+							<div className={ getChangeClass( activeComparison.metrics?.orderCountChange ) }>
 								{ formatPercent(
 									activeComparison.metrics
 										?.orderCountChangePercent
 								) }
 							</div>
 						</div>
-						<div className="card" style={ { padding: '12px' } }>
+						<div className="card waa-comparison__metric-card">
 							<strong>
 								{ __( 'Avg Order Value', 'woo-ai-analytics' ) }
 							</strong>
@@ -459,7 +434,7 @@ export default function DateRangeComparison() {
 										?.avgOrderValue
 								) }
 							</div>
-							<div style={ { fontSize: '12px', color: '#666' } }>
+							<div className="waa-comparison__metric-previous">
 								{ __(
 									'Previous:',
 									'woo-ai-analytics'
@@ -469,18 +444,7 @@ export default function DateRangeComparison() {
 										?.avgOrderValue
 								) }
 							</div>
-							<div
-								style={ {
-									color:
-										activeComparison.metrics?.aovChange >
-										0
-											? '#00a32a'
-											: activeComparison.metrics
-													?.aovChange < 0
-											? '#d63638'
-											: '#666',
-								} }
-							>
+							<div className={ getChangeClass( activeComparison.metrics?.aovChange ) }>
 								{ formatPercent(
 									activeComparison.metrics
 										?.aovChangePercent
@@ -488,7 +452,7 @@ export default function DateRangeComparison() {
 							</div>
 						</div>
 					</div>
-					<div style={ { marginBottom: '8px' } }>
+					<div className="waa-comparison__trend-row">
 						<strong>{ __( 'Overall Trend:', 'woo-ai-analytics' ) }</strong>{ ' ' }
 						{
 							TREND_LABELS[
@@ -499,7 +463,7 @@ export default function DateRangeComparison() {
 
 					{ activeComparison.breakdown?.length > 0 && (
 						<details>
-							<summary style={ { cursor: 'pointer' } }>
+							<summary className="waa-comparison__breakdown-toggle">
 								{ __(
 									'Daily Breakdown',
 									'woo-ai-analytics'
@@ -611,11 +575,10 @@ export default function DateRangeComparison() {
 								<td>
 									<button
 										type="button"
-										className="button button-small"
+										className="button button-small waa-comparison__action-btn"
 										onClick={ () =>
 											handleView( comp.id )
 										}
-										style={ { marginRight: '4px' } }
 									>
 										{ __( 'View', 'woo-ai-analytics' ) }
 									</button>
