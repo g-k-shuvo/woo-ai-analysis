@@ -80,7 +80,7 @@ describe('createQueryExecutor', () => {
 
       expect(mockDb.raw).toHaveBeenCalledTimes(1);
       expect(mockDb.raw).toHaveBeenCalledWith(
-        queryResult.sql,
+        queryResult.sql.replace(/\$(\d+)/g, '?'),
         queryResult.params,
       );
     });

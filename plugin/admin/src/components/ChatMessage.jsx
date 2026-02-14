@@ -74,6 +74,19 @@ export default function ChatMessage( { msg, formatTime, onRetry, loading } ) {
 				) : (
 					<ChartRenderer config={ activeConfig } />
 				) ) }
+			{ ! hasChart &&
+				msg.role === 'assistant' &&
+				msg.data?.rows?.length > 0 && (
+				<TableRenderer
+					config={ {
+						type: 'table',
+						headers: Object.keys( msg.data.rows[ 0 ] ),
+						rows: msg.data.rows.map( ( row ) =>
+							Object.values( row )
+						),
+					} }
+				/>
+			) }
 			{ hasChart && activeConfig && (
 				<SaveChartButton
 					chartConfig={ activeConfig }

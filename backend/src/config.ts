@@ -43,11 +43,11 @@ export function loadConfig(): AppConfig {
     database: {
       url: requireEnv(
         'DATABASE_URL',
-        'postgresql://woo_ai:woo_ai_pass@localhost:5432/woo_ai_analytics',
+        'postgresql://woo_ai:woo_ai_pass@localhost:5433/woo_ai_analytics',
       ),
       readonlyUrl: requireEnv(
         'DATABASE_READONLY_URL',
-        'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5432/woo_ai_analytics',
+        'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5433/woo_ai_analytics',
       ),
     },
     redis: {

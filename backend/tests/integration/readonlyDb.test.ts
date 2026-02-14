@@ -24,11 +24,11 @@ const { createReadonlyDb } = await import('../../src/db/readonlyConnection.js');
 
 const READONLY_URL =
   process.env.DATABASE_READONLY_URL ||
-  'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5432/woo_ai_analytics';
+  'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5433/woo_ai_analytics';
 
 const PRIMARY_URL =
   process.env.DATABASE_URL ||
-  'postgresql://woo_ai:woo_ai_pass@localhost:5432/woo_ai_analytics';
+  'postgresql://woo_ai:woo_ai_pass@localhost:5433/woo_ai_analytics';
 
 // Check if DB is reachable before running tests
 let dbAvailable = false;

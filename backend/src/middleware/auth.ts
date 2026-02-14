@@ -60,7 +60,7 @@ export function registerAuthMiddleware(fastify: FastifyInstance, deps: AuthDeps)
 
       try {
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
-        const separatorIndex = decoded.indexOf(':');
+        const separatorIndex = decoded.lastIndexOf(':');
         if (separatorIndex === -1) {
           throw new Error('Invalid token format');
         }

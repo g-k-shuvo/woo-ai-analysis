@@ -28,12 +28,12 @@ const { createProductQueries } = await import('../../src/ai/productQueries.js');
 // DEV ONLY: These credentials are for local Docker development. Never use in production.
 const READONLY_URL =
   process.env.DATABASE_READONLY_URL ||
-  'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5432/woo_ai_analytics';
+  'postgresql://woo_ai_readonly:woo_ai_pass@localhost:5433/woo_ai_analytics';
 
 // DEV ONLY: These credentials are for local Docker development. Never use in production.
 const PRIMARY_URL =
   process.env.DATABASE_URL ||
-  'postgresql://woo_ai:woo_ai_pass@localhost:5432/woo_ai_analytics';
+  'postgresql://woo_ai:woo_ai_pass@localhost:5433/woo_ai_analytics';
 
 const TEST_STORE_ID = '550e8400-e29b-41d4-a716-446655440001';
 const OTHER_STORE_ID = '660e8400-e29b-41d4-a716-446655440001';

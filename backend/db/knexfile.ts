@@ -11,7 +11,7 @@ const config: Record<string, Knex.Config> = {
     client: 'pg',
     connection:
       process.env.DATABASE_URL ||
-      'postgresql://woo_ai:woo_ai_pass@localhost:5432/woo_ai_analytics',
+      'postgresql://woo_ai:woo_ai_pass@localhost:5433/woo_ai_analytics',
     migrations: {
       directory: resolve(__dirname, 'migrations'),
       extension: 'ts',

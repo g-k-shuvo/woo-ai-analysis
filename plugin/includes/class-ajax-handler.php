@@ -1633,11 +1633,28 @@ final class Ajax_Handler {
 			'durationMs' => isset( $data['durationMs'] ) ? absint( $data['durationMs'] ) : 0,
 		);
 
+		// Include query result rows so the frontend can display data tables.
+		if ( isset( $data['rows'] ) && is_array( $data['rows'] ) ) {
+			$safe['rows'] = self::sanitize_recursive( $data['rows'] );
+		} else {
+			$safe['rows'] = array();
+		}
+
 		// Sanitize chart config if present.
 		if ( isset( $data['chartConfig'] ) && is_array( $data['chartConfig'] ) ) {
 			$safe['chartConfig'] = self::sanitize_chart_config( $data['chartConfig'] );
 		} else {
 			$safe['chartConfig'] = null;
+		}
+
+		// Include chart image (base64 PNG data URI) if present.
+		if ( isset( $data['chartImage'] ) && is_string( $data['chartImage'] ) ) {
+			$safe['chartImage'] = $data['chartImage'];
+		}
+
+		// Include chart meta for client-side chart type conversion.
+		if ( isset( $data['chartMeta'] ) && is_array( $data['chartMeta'] ) ) {
+			$safe['chartMeta'] = self::sanitize_recursive( $data['chartMeta'] );
 		}
 
 		return $safe;

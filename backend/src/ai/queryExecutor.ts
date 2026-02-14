@@ -44,7 +44,9 @@ export function createQueryExecutor(deps: QueryExecutorDeps) {
     const startTime = Date.now();
 
     try {
-      const result = await readonlyDb.raw(sql, params);
+      // Replace PostgreSQL-style $N placeholders with Knex ? placeholders
+      const knexSql = sql.replace(/\$(\d+)/g, '?');
+      const result = await readonlyDb.raw(knexSql, params);
 
       const durationMs = Date.now() - startTime;
       let rows: Record<string, unknown>[] = result.rows ?? [];

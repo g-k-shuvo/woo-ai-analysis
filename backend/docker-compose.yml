@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: woo_ai
       POSTGRES_PASSWORD: woo_ai_pass
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init-readonly-user.sql:/docker-entrypoint-initdb.d/01-readonly-user.sql
